@@ -4,15 +4,116 @@ import pandas as pd
 import streamlit as st
 import yfinance as yf
 
-st.set_page_config(layout="wide", page_title="Nifty 500 Scanner", initial_sidebar_state="collapsed")
+st.set_page_config(layout="wide", page_title="Nifty 500 — TradingView Screener", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
-.block-container { padding: 3.2rem 0.75rem 1rem 0.75rem; }
-.tv-header { display: flex; justify-content: space-between; align-items: center; background: #1E222D; border: 1px solid #2A2E39; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; }
-.tv-title { font-size: 1.1rem; font-weight: 700; color: #FFFFFF; }
-.tv-live { background: rgba(8,153,129,0.18); color: #089981; border: 1px solid #089981; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
-.tv-closed { background: rgba(242,54,69,0.18); color: #F23645; border: 1px solid #F23645; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+/* Full TradingView Dark Canvas */
+html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+    background-color: #131722 !important;
+    color: #D1D4DC !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif;
+}
+header[data-testid="stHeader"] {
+    background-color: rgba(19, 23, 34, 0.9) !important;
+}
+.block-container {
+    padding: 3.1rem 0.65rem 0.8rem 0.65rem !important;
+    max-width: 100% !important;
+}
+
+/* TradingView Top Bar */
+.tv-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1E222D;
+    border: 1px solid #2A2E39;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+}
+.tv-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.tv-logo {
+    background: #2962FF;
+    color: #FFFFFF;
+    font-weight: 800;
+    font-size: 0.85rem;
+    padding: 4px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+.tv-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1.1;
+}
+.tv-sub {
+    font-size: 0.72rem;
+    color: #787B86;
+    margin-top: 2px;
+}
+.tv-live {
+    background: rgba(8, 153, 129, 0.16);
+    color: #089981;
+    border: 1px solid rgba(8, 153, 129, 0.5);
+    padding: 4px 9px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.tv-closed {
+    background: rgba(242, 54, 69, 0.16);
+    color: #F23645;
+    border: 1px solid rgba(242, 54, 69, 0.5);
+    padding: 4px 9px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* TradingView Segmented Filter Pills */
+div[role="radiogroup"] {
+    background: #1E222D;
+    border: 1px solid #2A2E39;
+    border-radius: 6px;
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 8px;
+    width: fit-content;
+}
+div[role="radiogroup"] label {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 5px 14px !important;
+    margin: 0 !important;
+    color: #B2B5BE !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+}
+div[role="radiogroup"] label[data-checked="true"],
+div[role="radiogroup"] label:has(input:checked) {
+    background: #2962FF !important;
+    color: #FFFFFF !important;
+}
+div[role="radiogroup"] label > div:first-child {
+    display: none !important;
+}
+
+/* Dataframe Border & Container */
+[data-testid="stDataFrame"] {
+    border: 1px solid #2A2E39 !important;
+    border-radius: 6px !important;
+    overflow: hidden;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -40,10 +141,20 @@ def fetch_bulk_quotes(syms):
 if "prev_px" not in st.session_state:
     st.session_state.prev_px = {}
 
-def color_pct(v):
-    if pd.isna(v) or v == 0:
-        return "color: #787B86;"
-    return "color: #089981; font-weight: 600;" if v > 0 else "color: #F23645; font-weight: 600;"
+def style_table(df):
+    def color_cell(v):
+        if pd.isna(v) or v == 0:
+            return "background-color: #131722; color: #787B86;"
+        if v > 0:
+            return "background-color: rgba(8, 153, 129, 0.12); color: #089981; font-weight: 600;"
+        return "background-color: rgba(242, 54, 69, 0.12); color: #F23645; font-weight: 600;"
+
+    return (
+        df.style
+        .set_properties(**{"background-color": "#131722", "color": "#D1D4DC", "border-color": "#2A2E39"})
+        .map(color_cell, subset=["1m %", "1d %"])
+        .format({"LTP": "₹{:.2f}", "1m %": "{:+.2f}%", "1d %": "{:+.2f}%"}, na_rep="—")
+    )
 
 @st.fragment(run_every=60)
 def render_scanner():
@@ -54,7 +165,18 @@ def render_scanner():
     with st.spinner("Syncing market feed..."):
         quotes = fetch_bulk_quotes(YF_SYMS)
 
-    st.markdown(f'<div class="tv-header"><div><div class="tv-title">NIFTY 500 SCREENER</div><div style="font-size:0.72rem;color:#787B86;">Loaded: {len(quotes)}/{len(YF_SYMS)} · {now.strftime("%H:%M:%S IST")}</div></div>{badge}</div>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="tv-topbar">
+        <div class="tv-brand">
+            <div class="tv-logo">TV</div>
+            <div>
+                <div class="tv-title">NIFTY 500 SCREENER</div>
+                <div class="tv-sub">NSE Cash · {len(quotes)}/{len(YF_SYMS)} Stocks · {now.strftime("%H:%M:%S IST")}</div>
+            </div>
+        </div>
+        {badge}
+    </div>
+    """, unsafe_allow_html=True)
 
     rows = []
     for s, q in quotes.items():
@@ -67,24 +189,11 @@ def render_scanner():
     st.session_state.prev_px = {s: q["ltp"] for s, q in quotes.items()}
     df = pd.DataFrame(rows)
 
-    q_txt = st.text_input("Search", placeholder="🔍 Search ticker (e.g. RELIANCE)...", label_visibility="collapsed")
     sort_by = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
 
     if df.empty:
         st.warning("No market data returned yet. Retrying on next cycle...")
         return
 
-    if q_txt:
-        df = df[df["Symbol"].str.contains(q_txt.strip().upper(), na=False)]
-
     if sort_by == "1m Gainers":
         df = df[df["1m %"].notna() & (df["1m %"] > 0)].sort_values("1m %", ascending=False)
-    elif sort_by == "1m Losers":
-        df = df[df["1m %"].notna() & (df["1m %"] < 0)].sort_values("1m %", ascending=True)
-    else:
-        df = df.sort_values("1d %", ascending=False, na_position="last")
-
-    styled = df[["Symbol", "LTP", "1m %", "1d %"]].style.map(color_pct, subset=["1m %", "1d %"]).format({"LTP": "₹{:.2f}", "1m %": "{:+.2f}%", "1d %": "{:+.2f}%"}, na_rep="—")
-    st.dataframe(styled, height=580, use_container_width=True, hide_index=True)
-
-render_scanner()
