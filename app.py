@@ -117,5 +117,4 @@ def render_scanner():
         st.info("No stocks matched this 1-minute filter yet (market is closed or waiting for next 60s tick).")
         return
 
-    sort_cfg = {
-        "1d % ↓": ("1d %", False),
+    if srt == "1d % ↓":
