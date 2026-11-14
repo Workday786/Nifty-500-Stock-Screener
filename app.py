@@ -8,14 +8,27 @@ st.set_page_config(layout="wide", page_title="Nifty 500 — TradingView Screener
 
 st.markdown("""
 <style>
+/* Prevent graying out / dimming during 60s background refresh */
+[data-stale="true"], .stApp [data-testid="stVerticalBlock"] { opacity: 1 !important; transition: none !important; }
+div[data-testid="stStatusWidget"] { display: none !important; }
+
+/* TradingView Dark Theme Overrides */
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] { background-color: #131722 !important; color: #D1D4DC !important; }
 .block-container { padding: 3.1rem 0.65rem 1rem 0.65rem; max-width: 100%; }
 .tv-topbar { display: flex; justify-content: space-between; align-items: center; background: #1E222D; border: 1px solid #2A2E39; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; }
 .tv-brand { display: flex; align-items: center; gap: 8px; }
-.tv-logo { background: #2962FF; color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 4px 7px; border-radius: 4px; }
+.tv-logo { background: #2962FF; color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 4px 7px; border-radius: 4px; letter-spacing: 0.5px; }
 .tv-title { font-size: 1.05rem; font-weight: 700; color: #FFFFFF; line-height: 1.1; }
 .tv-sub { font-size: 0.72rem; color: #787B86; margin-top: 2px; }
 .tv-live { background: rgba(8,153,129,0.16); color: #089981; border: 1px solid #089981; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 .tv-closed { background: rgba(242,54,69,0.16); color: #F23645; border: 1px solid #F23645; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+
+/* TradingView Segmented Filter Bar */
+div[role="radiogroup"] { background: #1E222D; border: 1px solid #2A2E39; border-radius: 6px; padding: 4px; gap: 4px; margin-bottom: 8px; width: fit-content; }
+div[role="radiogroup"] label { background: transparent !important; border: none !important; border-radius: 4px !important; padding: 5px 14px !important; margin: 0 !important; color: #B2B5BE !important; font-size: 0.82rem !important; font-weight: 600 !important; }
+div[role="radiogroup"] label:has(input:checked) { background: #2962FF !important; color: #FFFFFF !important; }
+div[role="radiogroup"] label > div:first-child { display: none !important; }
+[data-testid="stDataFrame"] { border: 1px solid #2A2E39 !important; border-radius: 6px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -50,7 +63,8 @@ def render_scanner():
     is_open = (now.weekday() < 5) and (555 <= now.hour * 60 + now.minute <= 930)
     badge = '<span class="tv-live">● NSE LIVE</span>' if is_open else '<span class="tv-closed">● MARKET CLOSED</span>'
 
-    with st.spinner("Syncing market feed..."): quotes = fetch_bulk_quotes(YF_SYMS)
+    # Silent fetch without spinner so the screen never grays out
+    quotes = fetch_bulk_quotes(YF_SYMS)
 
     st.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 SCREENER</div><div class="tv-sub">NSE Cash · {len(quotes)}/{len(YF_SYMS)} Stocks · {now.strftime("%H:%M:%S IST")}</div></div></div>{badge}</div>', unsafe_allow_html=True)
 
@@ -80,6 +94,6 @@ def render_scanner():
         return
 
     styled = df[["Symbol", "LTP", "1m %", "1d %"]].style.map(color_pct, subset=["1m %", "1d %"]).format({"LTP": "₹{:.2f}", "1m %": "{:+.2f}%", "1d %": "{:+.2f}%"}, na_rep="—")
-    st.dataframe(styled, height=600, use_container_width=True, hide_index=True)
+    st.dataframe(styled, height=620, use_container_width=True, hide_index=True)
 
 render_scanner()
