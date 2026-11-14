@@ -1,4 +1,5 @@
 import io
+import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -102,9 +103,28 @@ st.markdown(
 )
 
 
-# ---- 1. Fetch Nifty 500 Symbols + Industry (with fallback if NSE blocks cloud IP) ----
+# ---- 1. Fetch Nifty 500 Symbols + Industry ----
+def clean_nifty_df(df: pd.DataFrame) -> pd.DataFrame:
+    df.columns = [str(c).strip() for c in df.columns]
+    df["Symbol"] = df["Symbol"].astype(str).str.strip()
+    df = df[~df["Symbol"].str.startswith("DUMMY", na=False)]
+    df = df[df["Symbol"].ne("") & df["Symbol"].ne("nan")]
+    df["YF_Symbol"] = df["Symbol"] + ".NS"
+    if "Industry" not in df.columns:
+        df["Industry"] = "Other"
+    else:
+        df["Industry"] = df["Industry"].fillna("Other").astype(str).str.strip()
+    return df[["Symbol", "YF_Symbol", "Industry"]]
+
+
 @st.cache_data(ttl=86400)
-def get_nifty500_meta():
+def get_nifty500_meta() -> pd.DataFrame:
+    # Check if local CSV exists in GitHub repo first
+    if os.path.exists("ind_nifty500list.csv"):
+        df = pd.read_csv("ind_nifty500list.csv")
+        if "Symbol" in [c.strip() for c in df.columns]:
+            return clean_nifty_df(df)
+
     urls = [
         "https://nseindia.com",
         "https://niftyindices.com",
@@ -119,30 +139,28 @@ def get_nifty500_meta():
             resp = requests.get(url, headers=headers, timeout=15)
             if resp.status_code == 200 and "Symbol" in resp.text:
                 df = pd.read_csv(io.StringIO(resp.text))
-                df.columns = [c.strip() for c in df.columns]
-                if "Symbol" in df.columns:
-                    df["Symbol"] = df["Symbol"].astype(str).str.strip()
-                    df = df[~df["Symbol"].str.startswith("DUMMY", na=False)]
-                    df = df[df["Symbol"].ne("") & df["Symbol"].ne("nan")]
-                    df["YF_Symbol"] = df["Symbol"] + ".NS"
-                    if "Industry" not in df.columns:
-                        df["Industry"] = "Other"
-                    return df[["Symbol", "YF_Symbol", "Industry"]]
+                if "Symbol" in [c.strip() for c in df.columns]:
+                    return clean_nifty_df(df)
         except Exception:
             continue
 
-    # Emergency fallback list if both NSE endpoints block the cloud IP
-    fallback = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN", "BHARTIARTL", "LT", "ITC", "AXISBANK"]
+    fallback = [
+        "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY",
+        "SBIN", "BHARTIARTL", "LT", "ITC", "AXISBANK",
+    ]
     return pd.DataFrame({
         "Symbol": fallback,
         "YF_Symbol": [s + ".NS" for s in fallback],
-        "Industry": ["Energy", "IT", "Banking", "Banking", "IT", "Banking", "Telecom", "Construction", "FMCG", "Banking"],
+        "Industry": [
+            "Energy", "IT", "Banking", "Banking", "IT",
+            "Banking", "Telecom", "Construction", "FMCG", "Banking",
+        ],
     })
 
 
 # ---- 2. Bulk Download Quotes ----
 @st.cache_data(ttl=45, show_spinner=False)
-def fetch_bulk_quotes(yf_symbols):
+def fetch_bulk_quotes(yf_symbols: list[str]) -> dict:
     raw = yf.download(
         tickers=yf_symbols,
         period="2d",
@@ -188,7 +206,9 @@ def is_nse_market_open(now_ist: datetime) -> bool:
 def color_pct(val):
     if pd.isna(val) or val == 0:
         return "color: #787B86;"
-    return "color: #089981; font-weight: 600;" if val > 0 else "color: #F23645; font-weight: 600;"
+    if val > 0:
+        return "color: #089981; font-weight: 600;"
+    return "color: #F23645; font-weight: 600;"
 
 
 # ---- 3. Auto-Refreshing TradingView Screener Fragment ----
@@ -198,11 +218,10 @@ def render_scanner():
     time_str = now_ist.strftime("%H:%M:%S IST")
     market_open = is_nse_market_open(now_ist)
 
-    badge_html = (
-        '<span class="tv-badge-live">● NSE LIVE</span>'
-        if market_open
-        else '<span class="tv-badge-closed">● MARKET CLOSED</span>'
-    )
+    if market_open:
+        badge_html = '<span class="tv-badge-live">● NSE LIVE</span>'
+    else:
+        badge_html = '<span class="tv-badge-closed">● MARKET CLOSED</span>'
 
     st.markdown(
         f"""
@@ -225,9 +244,16 @@ def render_scanner():
         ltp = q["ltp"]
         prev_close = q["prev_close"]
 
-        change_1d = round((ltp - prev_close) / prev_close * 100, 2) if (prev_close and prev_close > 0 and ltp) else None
+        if prev_close and prev_close > 0 and ltp:
+            change_1d = round((ltp - prev_close) / prev_close * 100, 2)
+        else:
+            change_1d = None
+
         prev_price = st.session_state.prev_prices.get(sym)
-        change_1m = round((ltp - prev_price) / prev_price * 100, 2) if (prev_price and prev_price > 0 and ltp) else None
+        if prev_price and prev_price > 0 and ltp:
+            change_1m = round((ltp - prev_price) / prev_price * 100, 2)
+        else:
+            change_1m = None
 
         rows.append({
             "Symbol": sym.replace(".NS", ""),
@@ -241,13 +267,26 @@ def render_scanner():
     st.session_state.prev_prices = {sym: q["ltp"] for sym, q in quotes.items()}
     df = pd.DataFrame(rows)
 
-    gainers_cnt = int((df["1d %"] > 0).sum()) if not df.empty else 0
-    losers_cnt = int((df["1d %"] < 0).sum()) if not df.empty else 0
-    top_gainer_row = df.loc[df["1d %"].idxmax()] if (not df.empty and not df["1d %"].isna().all()) else None
-    top_loser_row = df.loc[df["1d %"].idxmin()] if (not df.empty and not df["1d %"].isna().all()) else None
+    if not df.empty:
+        gainers_cnt = int((df["1d %"] > 0).sum())
+        losers_cnt = int((df["1d %"] < 0).sum())
+        top_gainer_row = df.loc[df["1d %"].idxmax()] if not df["1d %"].isna().all() else None
+        top_loser_row = df.loc[df["1d %"].idxmin()] if not df["1d %"].isna().all() else None
+    else:
+        gainers_cnt = 0
+        losers_cnt = 0
+        top_gainer_row = None
+        top_loser_row = None
 
-    tg_text = f"{top_gainer_row['Symbol']} (+{top_gainer_row['1d %']:.2f}%)" if top_gainer_row is not None else "-"
-    tl_text = f"{top_loser_row['Symbol']} ({top_loser_row['1d %']:.2f}%)" if top_loser_row is not None else "-"
+    if top_gainer_row is not None:
+        tg_text = f"{top_gainer_row['Symbol']} (+{top_gainer_row['1d %']:.2f}%)"
+    else:
+        tg_text = "-"
+
+    if top_loser_row is not None:
+        tl_text = f"{top_loser_row['Symbol']} ({top_loser_row['1d %']:.2f}%)"
+    else:
+        tl_text = "-"
 
     st.markdown(
         f"""
@@ -269,24 +308,12 @@ def render_scanner():
         unsafe_allow_html=True,
     )
 
-    c_search, c_sector = st.columns([1, 1])
+    c_search, c_sector = st.columns(2)
     with c_search:
-        search_q = st.text_input("Search Symbol", placeholder="🔍 Search ticker (e.g. RELIANCE)...", label_visibility="collapsed")
+        search_q = st.text_input(
+            "Search Symbol",
+            placeholder="🔍 Search ticker (e.g. RELIANCE)...",
+            label_visibility="collapsed",
+        )
     with c_sector:
-        sectors = ["All Sectors"] + sorted(df["Sector"].dropna().unique().tolist()) if not df.empty else ["All Sectors"]
-        selected_sector = st.selectbox("Sector", sectors, label_visibility="collapsed")
-
-    sort_by = st.radio(
-        "Sort",
-        ["🔥 1m Movers", "🚀 1m Gainers", "🔻 1m Losers", "📈 1d Gainers", "📉 1d Losers"],
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-
-    if not df.empty:
-        if search_q:
-            df = df[df["Symbol"].str.contains(search_q.strip().upper(), na=False)]
-        if selected_sector != "All Sectors":
-            df = df[df["Sector"] == selected_sector]
-
-        if sort_by == "🔥 1m Movers":
+        if not df.empty:
