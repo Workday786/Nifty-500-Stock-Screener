@@ -9,7 +9,7 @@ st.title("⚡ Nifty 500 — 1 Minute % Change Scanner")
 st.caption(f"Live scan · Auto-refresh every 60s · Last updated: {datetime.now().strftime('%H:%M:%S')}")
 
 # ---- 1. Get Nifty 500 symbol list ----
-@st.cache_data(ttl=86400)  # cache symbol list for 1 day
+@st.cache_data(ttl=86400)
 def get_nifty500_symbols():
     url = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -20,8 +20,8 @@ def get_nifty500_symbols():
 symbols = get_nifty500_symbols()
 st.sidebar.info(f"Tracking {len(symbols)} stocks")
 
-# ---- 2. Fetch quotes in batches ----
-def fetch_prices(symbols):
+# ---- 2. Fetch quotes (last price + previous close) in batches ----
+def fetch_quotes(symbols):
     data = {}
     batch = 100
     for i in range(0, len(symbols), batch):
@@ -31,38 +31,51 @@ def fetch_prices(symbols):
             for sym in chunk:
                 try:
                     fast = tickers.tickers[sym].fast_info
-                    data[sym] = fast["last_price"]
+                    data[sym] = {
+                        "ltp": fast["last_price"],
+                        "prev_close": fast["previous_close"],
+                    }
                 except Exception:
                     pass
         except Exception:
             pass
     return data
 
-# ---- 3. Store previous price to compute 1-min change ----
+# ---- 3. 1-minute change needs previous snapshot ----
 if "prev" not in st.session_state:
     st.session_state.prev = {}
-    st.session_state.prev_time = None
 
-prices = fetch_prices(symbols)
+quotes = fetch_quotes(symbols)
 
 rows = []
-for sym, price in prices.items():
+for sym, q in quotes.items():
+    ltp = q["ltp"]
+    prev_close = q["prev_close"]
+
+    # 1-day % change (works even when market is closed)
+    change_1d = None
+    if prev_close and prev_close > 0 and ltp:
+        change_1d = round((ltp - prev_close) / prev_close * 100, 2)
+
+    # 1-minute % change (needs 2 snapshots, so blank on first run)
     prev_price = st.session_state.prev.get(sym)
     change_1m = None
-    if prev_price and prev_price > 0 and price:
-        change_1m = round((price - prev_price) / prev_price * 100, 2)
+    if prev_price and prev_price > 0 and ltp:
+        change_1m = round((ltp - prev_price) / prev_price * 100, 2)
+
     rows.append({
         "Symbol": sym.replace(".NS", ""),
-        "LTP": price,
+        "LTP": ltp,
         "1-Min % Change": change_1m,
+        "1-Day % Change": change_1d,
     })
 
-# Save current prices for next minute's comparison
-st.session_state.prev = prices
-df = pd.DataFrame(rows)
-df = df.sort_values("1-Min % Change", ascending=False, na_position="last")
+st.session_state.prev = {sym: q["ltp"] for sym, q in quotes.items()}
 
-# ---- 4. Display with color coding ----
+df = pd.DataFrame(rows)
+df = df.sort_values("1-Day % Change", ascending=False, na_position="last")
+
+# ---- 4. Display ----
 st.dataframe(
     df,
     height=720,
@@ -70,18 +83,18 @@ st.dataframe(
     hide_index=True,
     column_config={
         "1-Min % Change": st.column_config.NumberColumn(format="%.2f%%"),
+        "1-Day % Change": st.column_config.NumberColumn(format="%.2f%%"),
         "LTP": st.column_config.NumberColumn(format="₹%.2f"),
     },
 )
 
-# Color highlight via simple top/bottom summary
 c1, c2, c3 = st.columns(3)
-gainers = df[df["1-Min % Change"] > 0]
-losers = df[df["1-Min % Change"] < 0]
-c1.success(f"🟢 Rising: {len(gainers)}")
-c2.error(f"🔴 Falling: {len(losers)}")
+gainers = df[df["1-Day % Change"] > 0]
+losers = df[df["1-Day % Change"] < 0]
+c1.success(f"🟢 Up today: {len(gainers)}")
+c2.error(f"🔴 Down today: {len(losers)}")
 c3.info(f"⚪ Flat/No data: {len(df) - len(gainers) - len(losers)}")
 
-# ---- 5. Auto-refresh every 60 seconds ----
+# ---- 5. Auto-refresh ----
 time.sleep(60)
 st.rerun()
