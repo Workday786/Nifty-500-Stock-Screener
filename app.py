@@ -1,10 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
 import yfinance as yf
 
-st.set_page_config(layout="wide", page_title="Nifty 500 — TradingView Screener", initial_sidebar_state="collapsed")
+st.set_page_config(layout="wide", page_title="Nifty 500 — 1m Candle Screener", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -35,18 +35,39 @@ NIFTY_500_RAW = """
 
 YF_SYMS = [s.strip() + ".NS" for s in NIFTY_500_RAW.replace("\n", "").split(",") if s.strip()]
 
-@st.cache_data(ttl=45, show_spinner=False)
-def fetch_bulk_quotes(syms):
-    raw = yf.download(tickers=syms, period="5d", interval="1d", group_by="ticker", threads=True, progress=False)
+@st.cache_data(ttl=55, show_spinner=False)
+def fetch_1m_candles(syms):
+    # Fetch last 2 days of 1-minute candles in bulk
+    raw = yf.download(tickers=syms, period="2d", interval="1m", group_by="ticker", threads=True, progress=False)
     quotes = {}
+    latest_ts = None
+    ist = ZoneInfo("Asia/Kolkata")
+
     for s in syms:
         try:
             c = raw[s]["Close"].dropna()
-            if len(c) >= 2: quotes[s] = {"prev": float(c.iloc[-2]), "ltp": float(c.iloc[-1])}
-            elif len(c) == 1: quotes[s] = {"prev": None, "ltp": float(c.iloc[-1])}
+            if c.empty: continue
+            c_ist = c.tz_convert(ist) if c.index.tz is not None else c.tz_localize("UTC").tz_convert(ist)
+
+            last_dt = c_ist.index[-1]
+            if latest_ts is None or last_dt > latest_ts: latest_ts = last_dt
+
+            last_close = float(c_ist.iloc[-1])
+            prev_1m_close = float(c_ist.iloc[-2]) if len(c_ist) >= 2 else None
+
+            # Previous trading day's final candle close for 1d %
+            prev_day_bars = c_ist[c_ist.index.date < last_dt.date()]
+            prev_day_close = float(prev_day_bars.iloc[-1]) if not prev_day_bars.empty else None
+
+            quotes[s] = {
+                "ltp": last_close,
+                "prev_1m": prev_1m_close,
+                "prev_day": prev_day_close,
+                "candle_time": last_dt.strftime("%I:%M %p"),
+            }
         except Exception:
             pass
-    return quotes
+    return quotes, latest_ts
 
 def color_pct(val):
     if pd.isna(val) or val == 0: return "color: #787B86;"
@@ -55,42 +76,33 @@ def color_pct(val):
 
 @st.fragment(run_every=60)
 def render_scanner():
-    prev_px = st.session_state.setdefault("prev_px", {})
-    now = datetime.now(ZoneInfo("Asia/Kolkata"))
-    next_dt = now + timedelta(seconds=60)
-    is_open = (now.weekday() < 5) and (555 <= now.hour * 60 + now.minute <= 930)
+    now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
+    is_open = (now_ist.weekday() < 5) and (555 <= now_ist.hour * 60 + now_ist.minute <= 930)
     badge = '<span class="tv-live">● NSE LIVE</span>' if is_open else '<span class="tv-closed">● MARKET CLOSED</span>'
 
-    quotes = fetch_bulk_quotes(YF_SYMS)
+    quotes, latest_ts = fetch_1m_candles(YF_SYMS)
 
-    st.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 SCREENER</div><div class="tv-sub">Stocks: {len(quotes)}/{len(YF_SYMS)} · Updated: {now.strftime("%I:%M:%S %p")} · Next: <span class="tv-cd">{next_dt.strftime("%I:%M:%S %p")}</span></div></div></div>{badge}</div>', unsafe_allow_html=True)
+    if latest_ts is not None:
+        candle_str = latest_ts.strftime("%d %b · %I:%M %p IST")
+        next_candle_str = (latest_ts + pd.Timedelta(minutes=1)).strftime("%I:%M %p")
+    else:
+        candle_str = "Syncing..."
+        next_candle_str = "—"
+
+    st.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 · 1M CANDLE SCREENER</div><div class="tv-sub">Stocks: {len(quotes)}/{len(YF_SYMS)} · Last Candle: <span class="tv-cd">{candle_str}</span> · Next Bar: {next_candle_str}</div></div></div>{badge}</div>', unsafe_allow_html=True)
 
     rows = []
     for s, q in quotes.items():
-        ltp, prev = q["ltp"], q["prev"]
-        c1d = round((ltp - prev) / prev * 100, 2) if (prev and prev > 0 and ltp) else None
-        p1m = prev_px.get(s)
+        ltp = q["ltp"]
+        p1m = q["prev_1m"]
+        p1d = q["prev_day"]
         c1m = round((ltp - p1m) / p1m * 100, 2) if (p1m and p1m > 0 and ltp) else None
-        rows.append({"Symbol": s.replace(".NS", ""), "LTP": round(ltp, 2), "1m %": c1m, "1d %": c1d})
+        c1d = round((ltp - p1d) / p1d * 100, 2) if (p1d and p1d > 0 and ltp) else None
+        rows.append({"Symbol": s.replace(".NS", ""), "Last Close": round(ltp, 2), "Candle": q["candle_time"], "1m %": c1m, "1d %": c1d})
 
-    st.session_state["prev_px"] = {s: q["ltp"] for s, q in quotes.items()}
     df = pd.DataFrame(rows)
 
     flt = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
 
     if df.empty:
-        st.warning("No market data returned yet. Retrying on next cycle...")
-        return
-
-    if flt == "1m Gainers": df = df[df["1m %"].notna() & (df["1m %"] > 0)].sort_values("1m %", ascending=False)
-    elif flt == "1m Losers": df = df[df["1m %"].notna() & (df["1m %"] < 0)].sort_values("1m %", ascending=True)
-    else: df = df.sort_values("1d %", ascending=False, na_position="last")
-
-    if df.empty:
-        st.info("No stocks matched this 1-minute filter yet (market is closed or waiting for next 60s tick).")
-        return
-
-    styled = df[["Symbol", "LTP", "1m %", "1d %"]].style.set_properties(**{"text-align": "center"}).map(color_pct, subset=["1m %", "1d %"]).format({"LTP": "₹{:.2f}", "1m %": "{:+.2f}%", "1d %": "{:+.2f}%"}, na_rep="—")
-    st.dataframe(styled, height=620, use_container_width=True, hide_index=True)
-
-render_scanner()
+        st.warning("No 1-minute candle data returned yet. Retrying on next cycle...")
