@@ -2,6 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import yfinance as yf
 
 st.set_page_config(layout="wide", page_title="Nifty 500 — TradingView Screener", initial_sidebar_state="collapsed")
@@ -15,20 +16,28 @@ div[data-testid="stStatusWidget"] { display: none !important; }
 /* TradingView Dark Theme Overrides */
 .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] { background-color: #131722 !important; color: #D1D4DC !important; }
 .block-container { padding: 3.1rem 0.65rem 1rem 0.65rem; max-width: 100%; }
+
+/* Top Header Bar */
 .tv-topbar { display: flex; justify-content: space-between; align-items: center; background: #1E222D; border: 1px solid #2A2E39; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; }
 .tv-brand { display: flex; align-items: center; gap: 8px; }
 .tv-logo { background: #2962FF; color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 4px 7px; border-radius: 4px; letter-spacing: 0.5px; }
 .tv-title { font-size: 1.05rem; font-weight: 700; color: #FFFFFF; line-height: 1.1; }
-.tv-sub { font-size: 0.72rem; color: #787B86; margin-top: 2px; }
+.tv-sub { font-size: 0.74rem; color: #B2B5BE; margin-top: 3px; }
+.tv-cd { color: #2962FF; font-weight: 700; }
 .tv-live { background: rgba(8,153,129,0.16); color: #089981; border: 1px solid #089981; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 .tv-closed { background: rgba(242,54,69,0.16); color: #F23645; border: 1px solid #F23645; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 
-/* TradingView Segmented Filter Bar */
+/* Segmented Filter Pills */
 div[role="radiogroup"] { background: #1E222D; border: 1px solid #2A2E39; border-radius: 6px; padding: 4px; gap: 4px; margin-bottom: 8px; width: fit-content; }
 div[role="radiogroup"] label { background: transparent !important; border: none !important; border-radius: 4px !important; padding: 5px 14px !important; margin: 0 !important; color: #B2B5BE !important; font-size: 0.82rem !important; font-weight: 600 !important; }
 div[role="radiogroup"] label:has(input:checked) { background: #2962FF !important; color: #FFFFFF !important; }
 div[role="radiogroup"] label > div:first-child { display: none !important; }
-[data-testid="stDataFrame"] { border: 1px solid #2A2E39 !important; border-radius: 6px !important; }
+
+/* Dataframe Border, Centered Headers with Filled BG & Centered Cells */
+[data-testid="stDataFrame"] { border: 1px solid #2A2E39 !important; border-radius: 6px !important; overflow: hidden !important; }
+[data-testid="stDataFrame"] [role="columnheader"] { background-color: #242938 !important; color: #FFFFFF !important; font-size: 15px !important; font-weight: 800 !important; justify-content: center !important; text-align: center !important; border-bottom: 1px solid #363A45 !important; }
+[data-testid="stDataFrame"] [role="columnheader"] * { justify-content: center !important; text-align: center !important; font-size: 15px !important; font-weight: 800 !important; color: #FFFFFF !important; }
+[data-testid="stDataFrame"] [role="gridcell"] { justify-content: center !important; text-align: center !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -53,8 +62,8 @@ def fetch_bulk_quotes(syms):
 
 def color_pct(val):
     if pd.isna(val) or val == 0: return "color: #787B86;"
-    if val > 0: return "color: #089981; font-weight: 600;"
-    return "color: #F23645; font-weight: 600;"
+    if val > 0: return "color: #089981; font-weight: 700;"
+    return "color: #F23645; font-weight: 700;"
 
 @st.fragment(run_every=60)
 def render_scanner():
@@ -62,11 +71,14 @@ def render_scanner():
     now = datetime.now(ZoneInfo("Asia/Kolkata"))
     is_open = (now.weekday() < 5) and (555 <= now.hour * 60 + now.minute <= 930)
     badge = '<span class="tv-live">● NSE LIVE</span>' if is_open else '<span class="tv-closed">● MARKET CLOSED</span>'
+    time_12h = now.strftime("%I:%M:%S %p IST")
 
-    # Silent fetch without spinner so the screen never grays out
     quotes = fetch_bulk_quotes(YF_SYMS)
 
-    st.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 SCREENER</div><div class="tv-sub">NSE Cash · {len(quotes)}/{len(YF_SYMS)} Stocks · {now.strftime("%H:%M:%S IST")}</div></div></div>{badge}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 SCREENER</div><div class="tv-sub">Stocks: {len(quotes)}/{len(YF_SYMS)} · Updated: {time_12h} · Next refresh: <span class="tv-cd" id="tv-timer">60s</span></div></div></div>{badge}</div>', unsafe_allow_html=True)
+
+    # Lightweight 1-second countdown ticker updating #tv-timer in parent DOM
+    components.html("""<script>let s=60;const el=window.parent.document.getElementById('tv-timer');setInterval(()=>{if(el&&s>0){s--;el.textContent=s+'s';}},1000);</script>""", height=0, width=0)
 
     rows = []
     for s, q in quotes.items():
@@ -85,15 +97,3 @@ def render_scanner():
         st.warning("No market data returned yet. Retrying on next cycle...")
         return
 
-    if flt == "1m Gainers": df = df[df["1m %"].notna() & (df["1m %"] > 0)].sort_values("1m %", ascending=False)
-    elif flt == "1m Losers": df = df[df["1m %"].notna() & (df["1m %"] < 0)].sort_values("1m %", ascending=True)
-    else: df = df.sort_values("1d %", ascending=False, na_position="last")
-
-    if df.empty:
-        st.info("No stocks matched this 1-minute filter yet (market is closed or waiting for next 60s tick).")
-        return
-
-    styled = df[["Symbol", "LTP", "1m %", "1d %"]].style.map(color_pct, subset=["1m %", "1d %"]).format({"LTP": "₹{:.2f}", "1m %": "{:+.2f}%", "1d %": "{:+.2f}%"}, na_rep="—")
-    st.dataframe(styled, height=620, use_container_width=True, hide_index=True)
-
-render_scanner()
