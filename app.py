@@ -35,36 +35,43 @@ NIFTY_500_RAW = """
 
 YF_SYMS = [s.strip() + ".NS" for s in NIFTY_500_RAW.replace("\n", "").split(",") if s.strip()]
 
-@st.cache_data(ttl=55, show_spinner=False)
-def fetch_1m_candles(syms):
-    # Fetch last 2 days of 1-minute candles in bulk
-    raw = yf.download(tickers=syms, period="2d", interval="1m", group_by="ticker", threads=True, progress=False)
-    quotes = {}
-    latest_ts = None
-    ist = ZoneInfo("Asia/Kolkata")
-
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_prev_day_closes(syms):
+    # Original 1d % baseline: previous trading day's official close
+    raw = yf.download(tickers=syms, period="5d", interval="1d", group_by="ticker", threads=True, progress=False)
+    prev_map = {}
     for s in syms:
         try:
             c = raw[s]["Close"].dropna()
-            if c.empty: continue
-            c_ist = c.tz_convert(ist) if c.index.tz is not None else c.tz_localize("UTC").tz_convert(ist)
+            if len(c) >= 2: prev_map[s] = float(c.iloc[-2])
+        except Exception:
+            pass
+    return prev_map
 
-            last_dt = c_ist.index[-1]
-            if latest_ts is None or last_dt > latest_ts: latest_ts = last_dt
+@st.cache_data(ttl=55, show_spinner=False)
+def fetch_last_2m_candles(syms):
+    # Only read the last 2 one-minute bars (.iloc[-2:]) per stock
+    quotes = {}
+    latest_ts = None
+    ist = ZoneInfo("Asia/Kolkata")
+    batch_size = 100
 
-            last_close = float(c_ist.iloc[-1])
-            prev_1m_close = float(c_ist.iloc[-2]) if len(c_ist) >= 2 else None
-
-            # Previous trading day's final candle close for 1d %
-            prev_day_bars = c_ist[c_ist.index.date < last_dt.date()]
-            prev_day_close = float(prev_day_bars.iloc[-1]) if not prev_day_bars.empty else None
-
-            quotes[s] = {
-                "ltp": last_close,
-                "prev_1m": prev_1m_close,
-                "prev_day": prev_day_close,
-                "candle_time": last_dt.strftime("%I:%M %p"),
-            }
+    for i in range(0, len(syms), batch_size):
+        chunk = syms[i:i + batch_size]
+        try:
+            raw = yf.download(tickers=chunk, period="1d", interval="1m", group_by="ticker", threads=True, progress=False)
+            for s in chunk:
+                try:
+                    c = raw[s]["Close"].dropna().iloc[-2:]
+                    if c.empty: continue
+                    c_ist = c.tz_convert(ist) if c.index.tz is not None else c.tz_localize("UTC").tz_convert(ist)
+                    last_dt = c_ist.index[-1]
+                    if latest_ts is None or last_dt > latest_ts: latest_ts = last_dt
+                    last_close = float(c_ist.iloc[-1])
+                    prev_1m = float(c_ist.iloc[-2]) if len(c_ist) == 2 else None
+                    quotes[s] = {"ltp": last_close, "prev_1m": prev_1m, "candle_time": last_dt.strftime("%I:%M %p")}
+                except Exception:
+                    pass
         except Exception:
             pass
     return quotes, latest_ts
@@ -80,7 +87,8 @@ def render_scanner():
     is_open = (now_ist.weekday() < 5) and (555 <= now_ist.hour * 60 + now_ist.minute <= 930)
     badge = '<span class="tv-live">● NSE LIVE</span>' if is_open else '<span class="tv-closed">● MARKET CLOSED</span>'
 
-    quotes, latest_ts = fetch_1m_candles(YF_SYMS)
+    prev_day_map = fetch_prev_day_closes(YF_SYMS)
+    quotes, latest_ts = fetch_last_2m_candles(YF_SYMS)
 
     if latest_ts is not None:
         candle_str = latest_ts.strftime("%d %b · %I:%M %p IST")
@@ -93,16 +101,5 @@ def render_scanner():
 
     rows = []
     for s, q in quotes.items():
-        ltp = q["ltp"]
-        p1m = q["prev_1m"]
-        p1d = q["prev_day"]
-        c1m = round((ltp - p1m) / p1m * 100, 2) if (p1m and p1m > 0 and ltp) else None
-        c1d = round((ltp - p1d) / p1d * 100, 2) if (p1d and p1d > 0 and ltp) else None
-        rows.append({"Symbol": s.replace(".NS", ""), "Last Close": round(ltp, 2), "Candle": q["candle_time"], "1m %": c1m, "1d %": c1d})
-
-    df = pd.DataFrame(rows)
-
-    flt = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
-
-    if df.empty:
-        st.warning("No 1-minute candle data returned yet. Retrying on next cycle...")
+        ltp, p1m = q["ltp"], q["prev_1m"]
+        p1d = prev_day_map.get(s)
