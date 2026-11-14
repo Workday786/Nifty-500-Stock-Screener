@@ -21,43 +21,32 @@ st.markdown("""
 @st.cache_data(ttl=86400)
 def get_nifty500_symbols():
     df = None
-    # 1. Search all folders in the repo for any CSV file (handles subfolders or renamed CSVs)
+    # 1. Check local CSV in repo
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    for root, _, files in os.walk(base_dir):
-        for fname in files:
-            if fname.lower().endswith(".csv"):
-                try:
-                    tmp = pd.read_csv(os.path.join(root, fname), encoding="utf-8-sig")
-                    tmp.columns = [str(c).strip() for c in tmp.columns]
-                    if "Symbol" in tmp.columns and len(tmp) > 100:
-                        df = tmp
-                        break
-                except Exception:
-                    pass
-        if df is not None:
-            break
+    csv_path = os.path.join(base_dir, "ind_nifty500list.csv")
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path, encoding="utf-8-sig")
 
-    # 2. Fallback: fetch directly from your public GitHub repo raw file
-    if df is None:
+    # 2. Original NSE archives URL
+    if df is None or "Symbol" not in [str(c).strip() for c in df.columns]:
         try:
-            gh_url = "https://githubusercontent.com"
-            r = requests.get(gh_url, timeout=15)
-            if r.status_code == 200:
-                tmp = pd.read_csv(io.StringIO(r.text), encoding="utf-8-sig")
-                tmp.columns = [str(c).strip() for c in tmp.columns]
-                if "Symbol" in tmp.columns:
-                    df = tmp
+            url = "https://nseindia.com"
+            headers = {"User-Agent": "Mozilla/5.0"}
+            csv_bytes = requests.get(url, headers=headers, timeout=15).content
+            df = pd.read_csv(io.BytesIO(csv_bytes))
         except Exception:
             pass
 
-    if df is None:
-        fb = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN", "BHARTIARTL", "LT", "ITC", "AXISBANK"]
-        return [s + ".NS" for s in fb]
+    # 3. Full raw GitHub CSV URL
+    if df is None or "Symbol" not in [str(c).strip() for c in df.columns]:
+        gh_url = "https://githubusercontent.com"
+        csv_bytes = requests.get(gh_url, timeout=15).content
+        df = pd.read_csv(io.BytesIO(csv_bytes))
 
-    df["Symbol"] = df["Symbol"].astype(str).str.strip()
-    df = df[~df["Symbol"].str.startswith("DUMMY", na=False)]
-    df = df[df["Symbol"].ne("") & df["Symbol"].ne("nan")]
-    return [s + ".NS" for s in df["Symbol"].tolist()]
+    df.columns = [str(c).strip() for c in df.columns]
+    syms = [str(s).strip() for s in df["Symbol"].dropna().tolist()]
+    syms = [s for s in syms if s and not s.startswith("DUMMY")]
+    return [s + ".NS" for s in syms]
 
 @st.cache_data(ttl=45, show_spinner=False)
 def fetch_bulk_quotes(syms):
