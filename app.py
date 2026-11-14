@@ -47,21 +47,16 @@ def fetch_bulk_quotes(syms):
     for s in syms:
         try:
             c = raw[s]["Close"].dropna()
-            if len(c) >= 2:
-                quotes[s] = {"prev": float(c.iloc[-2]), "ltp": float(c.iloc[-1])}
-            elif len(c) == 1:
-                quotes[s] = {"prev": None, "ltp": float(c.iloc[-1])}
+            if len(c) >= 2: quotes[s] = {"prev": float(c.iloc[-2]), "ltp": float(c.iloc[-1])}
+            elif len(c) == 1: quotes[s] = {"prev": None, "ltp": float(c.iloc[-1])}
         except Exception:
             pass
     return quotes
 
 def fmt_cell(val):
-    if pd.isna(val):
-        return '<td class="tv-neu">—</td>'
-    if val > 0:
-        return f'<td class="tv-pos">+{val:.2f}%</td>'
-    if val < 0:
-        return f'<td class="tv-neg">{val:.2f}%</td>'
+    if pd.isna(val): return '<td class="tv-neu">—</td>'
+    if val > 0: return f'<td class="tv-pos">+{val:.2f}%</td>'
+    if val < 0: return f'<td class="tv-neg">{val:.2f}%</td>'
     return '<td class="tv-neu">0.00%</td>'
 
 @st.fragment(run_every=60)
@@ -71,21 +66,9 @@ def render_scanner():
     is_open = (now.weekday() < 5) and (555 <= now.hour * 60 + now.minute <= 930)
     badge = '<span class="tv-live">● NSE LIVE</span>' if is_open else '<span class="tv-closed">● MARKET CLOSED</span>'
 
-    with st.spinner("Syncing market feed..."):
-        quotes = fetch_bulk_quotes(YF_SYMS)
+    with st.spinner("Syncing market feed..."): quotes = fetch_bulk_quotes(YF_SYMS)
 
-    st.markdown(f"""
-    <div class="tv-topbar">
-        <div class="tv-brand">
-            <div class="tv-logo">TV</div>
-            <div>
-                <div class="tv-title">NIFTY 500 SCREENER</div>
-                <div class="tv-sub">NSE Cash · {len(quotes)}/{len(YF_SYMS)} Stocks · {now.strftime("%H:%M:%S IST")}</div>
-            </div>
-        </div>
-        {badge}
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 SCREENER</div><div class="tv-sub">NSE Cash · {len(quotes)}/{len(YF_SYMS)} Stocks · {now.strftime("%H:%M:%S IST")}</div></div></div>{badge}</div>', unsafe_allow_html=True)
 
     rows = []
     for s, q in quotes.items():
@@ -99,22 +82,20 @@ def render_scanner():
     df = pd.DataFrame(rows)
 
     c1, c2 = st.columns([1.4, 1.6])
-    with c1:
-        flt = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
-    with c2:
-        srt = st.radio("Sort", ["1d % ↓", "1d % ↑", "1m % ↓", "1m % ↑", "LTP ↓", "LTP ↑", "A-Z"], horizontal=True, label_visibility="collapsed")
+    with c1: flt = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
+    with c2: srt = st.radio("Sort", ["1d % ↓", "1d % ↑", "1m % ↓", "1m % ↑", "LTP ↓", "LTP ↑", "A-Z"], horizontal=True, label_visibility="collapsed")
 
     if df.empty:
         st.warning("No market data returned yet. Retrying on next cycle...")
         return
 
-    if flt == "1m Gainers":
-        df = df[df["1m %"].notna() & (df["1m %"] > 0)]
-    elif flt == "1m Losers":
-        df = df[df["1m %"].notna() & (df["1m %"] < 0)]
+    if flt == "1m Gainers": df = df[df["1m %"].notna() & (df["1m %"] > 0)]
+    elif flt == "1m Losers": df = df[df["1m %"].notna() & (df["1m %"] < 0)]
 
     if df.empty:
         st.info("No stocks matched this 1-minute filter yet (market is closed or waiting for next 60s tick).")
         return
 
-    if srt == "1d % ↓":
+    if srt == "1d % ↓": df = df.sort_values("1d %", ascending=False, na_position="last")
+    elif srt == "1d % ↑": df = df.sort_values("1d %", ascending=True, na_position="last")
+    elif srt == "1m % ↓": df = df.sort_values("1m %", ascending=False, na_position="last")
