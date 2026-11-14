@@ -27,27 +27,17 @@ header[data-testid="stHeader"] { background-color: #131722; }
 
 @st.cache_data(ttl=86400)
 def get_nifty500_meta():
-    urls = [
-        "https://nseindia.com",
-        "https://niftyindices.com",
-    ]
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0", "Referer": "https://nseindia.com"}
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = os.path.join(base_dir, "ind_nifty500list.csv")
     df = None
-    if os.path.exists("ind_nifty500list.csv"):
-        df = pd.read_csv("ind_nifty500list.csv")
-    else:
-        for u in urls:
-            try:
-                r = requests.get(u, headers=headers, timeout=15)
-                if r.status_code == 200 and "Symbol" in r.text:
-                    df = pd.read_csv(io.StringIO(r.text))
-                    break
-            except Exception:
-                pass
+    if os.path.exists(csv_path):
+        tmp = pd.read_csv(csv_path, encoding="utf-8-sig")
+        tmp.columns = [str(c).strip() for c in tmp.columns]
+        if "Symbol" in tmp.columns:
+            df = tmp
     if df is None:
         fb = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN", "BHARTIARTL", "LT", "ITC", "AXISBANK"]
-        return pd.DataFrame({"Symbol": fb, "YF": [s + ".NS" for s in fb], "Industry": ["Other"] * len(fb)})
-    df.columns = [str(c).strip() for c in df.columns]
+        return pd.DataFrame({"Symbol": fb, "YF": [s + ".NS" for s in fb], "Industry": ["Nifty Top"] * len(fb)})
     df["Symbol"] = df["Symbol"].astype(str).str.strip()
     df = df[~df["Symbol"].str.startswith("DUMMY", na=False)]
     df = df[df["Symbol"].ne("") & df["Symbol"].ne("nan")]
