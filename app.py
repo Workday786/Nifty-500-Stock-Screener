@@ -1,7 +1,8 @@
-import os
+import io, os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import pandas as pd
+import requests
 import streamlit as st
 import yfinance as yf
 
@@ -19,17 +20,40 @@ st.markdown("""
 
 @st.cache_data(ttl=86400)
 def get_nifty500_symbols():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, "ind_nifty500list.csv")
     df = None
-    if os.path.exists(csv_path):
-        tmp = pd.read_csv(csv_path, encoding="utf-8-sig")
-        tmp.columns = [str(c).strip() for c in tmp.columns]
-        if "Symbol" in tmp.columns:
-            df = tmp
+    # 1. Search all folders in the repo for any CSV file (handles subfolders or renamed CSVs)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    for root, _, files in os.walk(base_dir):
+        for fname in files:
+            if fname.lower().endswith(".csv"):
+                try:
+                    tmp = pd.read_csv(os.path.join(root, fname), encoding="utf-8-sig")
+                    tmp.columns = [str(c).strip() for c in tmp.columns]
+                    if "Symbol" in tmp.columns and len(tmp) > 100:
+                        df = tmp
+                        break
+                except Exception:
+                    pass
+        if df is not None:
+            break
+
+    # 2. Fallback: fetch directly from your public GitHub repo raw file
+    if df is None:
+        try:
+            gh_url = "https://githubusercontent.com"
+            r = requests.get(gh_url, timeout=15)
+            if r.status_code == 200:
+                tmp = pd.read_csv(io.StringIO(r.text), encoding="utf-8-sig")
+                tmp.columns = [str(c).strip() for c in tmp.columns]
+                if "Symbol" in tmp.columns:
+                    df = tmp
+        except Exception:
+            pass
+
     if df is None:
         fb = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN", "BHARTIARTL", "LT", "ITC", "AXISBANK"]
         return [s + ".NS" for s in fb]
+
     df["Symbol"] = df["Symbol"].astype(str).str.strip()
     df = df[~df["Symbol"].str.startswith("DUMMY", na=False)]
     df = df[df["Symbol"].ne("") & df["Symbol"].ne("nan")]
