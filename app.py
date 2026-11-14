@@ -8,7 +8,6 @@ st.set_page_config(layout="wide", page_title="Nifty 500 — TradingView Screener
 
 st.markdown("""
 <style>
-.stApp { background-color: #131722; color: #D1D4DC; }
 .block-container { padding: 3.1rem 0.65rem 1rem 0.65rem; max-width: 100%; }
 .tv-topbar { display: flex; justify-content: space-between; align-items: center; background: #1E222D; border: 1px solid #2A2E39; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; }
 .tv-brand { display: flex; align-items: center; gap: 8px; }
@@ -17,20 +16,6 @@ st.markdown("""
 .tv-sub { font-size: 0.72rem; color: #787B86; margin-top: 2px; }
 .tv-live { background: rgba(8,153,129,0.16); color: #089981; border: 1px solid #089981; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 .tv-closed { background: rgba(242,54,69,0.16); color: #F23645; border: 1px solid #F23645; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
-div[role="radiogroup"] { background: #1E222D; border: 1px solid #2A2E39; border-radius: 6px; padding: 4px; gap: 4px; margin-bottom: 6px; width: fit-content; }
-div[role="radiogroup"] label { background: transparent !important; border: none !important; border-radius: 4px !important; padding: 4px 11px !important; margin: 0 !important; color: #B2B5BE !important; font-size: 0.8rem !important; font-weight: 600 !important; }
-div[role="radiogroup"] label:has(input:checked) { background: #2962FF !important; color: #FFFFFF !important; }
-div[role="radiogroup"] label > div:first-child { display: none !important; }
-.tv-table-wrap { max-height: 70vh; overflow-y: auto; border: 1px solid #2A2E39; border-radius: 6px; background: #131722; }
-.tv-tbl { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
-.tv-tbl thead th { position: sticky; top: 0; background: #1E222D; color: #787B86; font-weight: 700; text-align: right; padding: 9px 10px; border-bottom: 1px solid #2A2E39; font-size: 0.75rem; text-transform: uppercase; z-index: 2; }
-.tv-tbl thead th:first-child { text-align: left; }
-.tv-tbl tbody td { padding: 8px 10px; border-bottom: 1px solid #1E222D; text-align: right; color: #D1D4DC; }
-.tv-tbl tbody td:first-child { text-align: left; font-weight: 700; color: #FFFFFF; }
-.tv-tbl tbody tr:hover { background: #1E222D; }
-.tv-pos { color: #089981 !important; font-weight: 600; background: rgba(8,153,129,0.10); }
-.tv-neg { color: #F23645 !important; font-weight: 600; background: rgba(242,54,69,0.10); }
-.tv-neu { color: #787B86 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -53,11 +38,10 @@ def fetch_bulk_quotes(syms):
             pass
     return quotes
 
-def fmt_cell(val):
-    if pd.isna(val): return '<td class="tv-neu">—</td>'
-    if val > 0: return f'<td class="tv-pos">+{val:.2f}%</td>'
-    if val < 0: return f'<td class="tv-neg">{val:.2f}%</td>'
-    return '<td class="tv-neu">0.00%</td>'
+def color_pct(val):
+    if pd.isna(val) or val == 0: return "color: #787B86;"
+    if val > 0: return "color: #089981; font-weight: 600;"
+    return "color: #F23645; font-weight: 600;"
 
 @st.fragment(run_every=60)
 def render_scanner():
@@ -81,21 +65,21 @@ def render_scanner():
     st.session_state["prev_px"] = {s: q["ltp"] for s, q in quotes.items()}
     df = pd.DataFrame(rows)
 
-    c1, c2 = st.columns([1.4, 1.6])
-    with c1: flt = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
-    with c2: srt = st.radio("Sort", ["1d % ↓", "1d % ↑", "1m % ↓", "1m % ↑", "LTP ↓", "LTP ↑", "A-Z"], horizontal=True, label_visibility="collapsed")
+    flt = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
 
     if df.empty:
         st.warning("No market data returned yet. Retrying on next cycle...")
         return
 
-    if flt == "1m Gainers": df = df[df["1m %"].notna() & (df["1m %"] > 0)]
-    elif flt == "1m Losers": df = df[df["1m %"].notna() & (df["1m %"] < 0)]
+    if flt == "1m Gainers": df = df[df["1m %"].notna() & (df["1m %"] > 0)].sort_values("1m %", ascending=False)
+    elif flt == "1m Losers": df = df[df["1m %"].notna() & (df["1m %"] < 0)].sort_values("1m %", ascending=True)
+    else: df = df.sort_values("1d %", ascending=False, na_position="last")
 
     if df.empty:
         st.info("No stocks matched this 1-minute filter yet (market is closed or waiting for next 60s tick).")
         return
 
-    if srt == "1d % ↓": df = df.sort_values("1d %", ascending=False, na_position="last")
-    elif srt == "1d % ↑": df = df.sort_values("1d %", ascending=True, na_position="last")
-    elif srt == "1m % ↓": df = df.sort_values("1m %", ascending=False, na_position="last")
+    styled = df[["Symbol", "LTP", "1m %", "1d %"]].style.map(color_pct, subset=["1m %", "1d %"]).format({"LTP": "₹{:.2f}", "1m %": "{:+.2f}%", "1d %": "{:+.2f}%"}, na_rep="—")
+    st.dataframe(styled, height=600, use_container_width=True, hide_index=True)
+
+render_scanner()
