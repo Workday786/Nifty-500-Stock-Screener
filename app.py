@@ -19,7 +19,7 @@ st.markdown("""
 .tv-closed { background: rgba(242,54,69,0.16); color: #F23645; border: 1px solid #F23645; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 .tv-table-wrap { max-height: 74vh; overflow-y: auto; border: 1px solid #2A2E39; border-radius: 6px; background: #131722; }
 .tv-tbl { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
-.tv-tbl thead th { position: sticky; top: 0; background: #1E222D; color: #787B86; font-weight: 600; text-align: right; padding: 9px 10px; border-bottom: 1px solid #2A2E39; font-size: 0.76rem; text-transform: uppercase; }
+.tv-tbl thead th { position: sticky; top: 0; background: #1E222D; color: #787B86; font-weight: 600; text-align: right; padding: 9px 10px; border-bottom: 1px solid #2A2E39; font-size: 0.76rem; text-transform: uppercase; z-index: 2; }
 .tv-tbl thead th:first-child { text-align: left; }
 .tv-tbl tbody td { padding: 8px 10px; border-bottom: 1px solid #1E222D; text-align: right; color: #D1D4DC; }
 .tv-tbl tbody td:first-child { text-align: left; font-weight: 700; color: #FFFFFF; }
@@ -51,9 +51,6 @@ def fetch_bulk_quotes(syms):
             pass
     return quotes
 
-if "prev_px" not in st.session_state:
-    st.session_state.prev_px = {}
-
 def fmt_cell(val):
     if pd.isna(val):
         return '<td class="tv-neu">—</td>'
@@ -65,6 +62,7 @@ def fmt_cell(val):
 
 @st.fragment(run_every=60)
 def render_scanner():
+    prev_px = st.session_state.setdefault("prev_px", {})
     now = datetime.now(ZoneInfo("Asia/Kolkata"))
     is_open = (now.weekday() < 5) and (555 <= now.hour * 60 + now.minute <= 930)
     badge = '<span class="tv-live">● NSE LIVE</span>' if is_open else '<span class="tv-closed">● MARKET CLOSED</span>'
@@ -89,11 +87,11 @@ def render_scanner():
     for s, q in quotes.items():
         ltp, prev = q["ltp"], q["prev"]
         c1d = round((ltp - prev) / prev * 100, 2) if (prev and prev > 0 and ltp) else None
-        p1m = st.session_state.prev_px.get(s)
+        p1m = prev_px.get(s)
         c1m = round((ltp - p1m) / p1m * 100, 2) if (p1m and p1m > 0 and ltp) else None
         rows.append({"Symbol": s.replace(".NS", ""), "LTP": round(ltp, 2), "1m %": c1m, "1d %": c1d})
 
-    st.session_state.prev_px = {s: q["ltp"] for s, q in quotes.items()}
+    st.session_state["prev_px"] = {s: q["ltp"] for s, q in quotes.items()}
     df = pd.DataFrame(rows)
 
     sort_by = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
@@ -110,7 +108,7 @@ def render_scanner():
         df = df.sort_values("1d %", ascending=False, na_position="last")
 
     if df.empty:
-        st.info("No stocks matched this 1-minute filter yet (market may be closed or waiting for next 60s tick).")
+        st.info("No stocks matched this 1-minute filter yet (market is closed or waiting for next 60s tick).")
         return
 
     html_rows = []
