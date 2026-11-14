@@ -1,9 +1,7 @@
-import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 import yfinance as yf
 
 st.set_page_config(layout="wide", page_title="Nifty 500 — TradingView Screener", initial_sidebar_state="collapsed")
@@ -11,7 +9,7 @@ st.set_page_config(layout="wide", page_title="Nifty 500 — TradingView Screener
 st.markdown("""
 <style>
 .stApp { background-color: #131722; color: #D1D4DC; }
-.block-container { padding: 3.1rem 0.65rem 0.5rem 0.65rem; max-width: 100%; }
+.block-container { padding: 3.1rem 0.65rem 1rem 0.65rem; max-width: 100%; }
 .tv-topbar { display: flex; justify-content: space-between; align-items: center; background: #1E222D; border: 1px solid #2A2E39; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; }
 .tv-brand { display: flex; align-items: center; gap: 8px; }
 .tv-logo { background: #2962FF; color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 4px 7px; border-radius: 4px; }
@@ -20,9 +18,19 @@ st.markdown("""
 .tv-live { background: rgba(8,153,129,0.16); color: #089981; border: 1px solid #089981; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 .tv-closed { background: rgba(242,54,69,0.16); color: #F23645; border: 1px solid #F23645; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 div[role="radiogroup"] { background: #1E222D; border: 1px solid #2A2E39; border-radius: 6px; padding: 4px; gap: 4px; margin-bottom: 6px; width: fit-content; }
-div[role="radiogroup"] label { background: transparent !important; border: none !important; border-radius: 4px !important; padding: 5px 14px !important; margin: 0 !important; color: #B2B5BE !important; font-size: 0.82rem !important; font-weight: 600 !important; }
+div[role="radiogroup"] label { background: transparent !important; border: none !important; border-radius: 4px !important; padding: 4px 11px !important; margin: 0 !important; color: #B2B5BE !important; font-size: 0.8rem !important; font-weight: 600 !important; }
 div[role="radiogroup"] label:has(input:checked) { background: #2962FF !important; color: #FFFFFF !important; }
 div[role="radiogroup"] label > div:first-child { display: none !important; }
+.tv-table-wrap { max-height: 70vh; overflow-y: auto; border: 1px solid #2A2E39; border-radius: 6px; background: #131722; }
+.tv-tbl { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.tv-tbl thead th { position: sticky; top: 0; background: #1E222D; color: #787B86; font-weight: 700; text-align: right; padding: 9px 10px; border-bottom: 1px solid #2A2E39; font-size: 0.75rem; text-transform: uppercase; z-index: 2; }
+.tv-tbl thead th:first-child { text-align: left; }
+.tv-tbl tbody td { padding: 8px 10px; border-bottom: 1px solid #1E222D; text-align: right; color: #D1D4DC; }
+.tv-tbl tbody td:first-child { text-align: left; font-weight: 700; color: #FFFFFF; }
+.tv-tbl tbody tr:hover { background: #1E222D; }
+.tv-pos { color: #089981 !important; font-weight: 600; background: rgba(8,153,129,0.10); }
+.tv-neg { color: #F23645 !important; font-weight: 600; background: rgba(242,54,69,0.10); }
+.tv-neu { color: #787B86 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -31,75 +39,6 @@ NIFTY_500_RAW = """
 """
 
 YF_SYMS = [s.strip() + ".NS" for s in NIFTY_500_RAW.replace("\n", "").split(",") if s.strip()]
-
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, sans-serif; }
-body { background: #131722; color: #D1D4DC; }
-.wrap { height: 73vh; overflow-y: auto; border: 1px solid #2A2E39; border-radius: 6px; background: #131722; }
-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-thead th { position: sticky; top: 0; background: #1E222D; color: #787B86; font-weight: 700; text-align: right; padding: 10px; border-bottom: 1px solid #2A2E39; font-size: 12px; text-transform: uppercase; cursor: pointer; user-select: none; z-index: 2; }
-thead th:hover { color: #FFFFFF; background: #262B38; }
-thead th:first-child { text-align: left; }
-tbody td { padding: 9px 10px; border-bottom: 1px solid #1E222D; text-align: right; color: #D1D4DC; }
-tbody td:first-child { text-align: left; font-weight: 700; color: #FFFFFF; }
-tbody tr:hover { background: #1E222D; }
-.pos { color: #089981 !important; font-weight: 600; background: rgba(8,153,129,0.10); }
-.neg { color: #F23645 !important; font-weight: 600; background: rgba(242,54,69,0.10); }
-.neu { color: #787B86 !important; }
-.arr { font-size: 10px; margin-left: 3px; color: #2962FF; }
-</style>
-</head>
-<body>
-<div class="wrap">
-<table>
-<thead>
-<tr>
-<th onclick="sortBy('sym', false)">Symbol <span class="arr" id="a-sym"></span></th>
-<th onclick="sortBy('ltp', true)">LTP <span class="arr" id="a-ltp"></span></th>
-<th onclick="sortBy('m1', true)">1m % <span class="arr" id="a-m1"></span></th>
-<th onclick="sortBy('d1', true)">1d % <span class="arr" id="a-d1">▼</span></th>
-</tr>
-</thead>
-<tbody id="tb"></tbody>
-</table>
-</div>
-<script>
-const DATA = __DATA_JSON__;
-let dir = { sym: true, ltp: false, m1: false, d1: false };
-function fmtCell(v) {
-    if (v === null || v === undefined) return '<td class="neu">—</td>';
-    if (v > 0) return '<td class="pos">+' + v.toFixed(2) + '%</td>';
-    if (v < 0) return '<td class="neg">' + v.toFixed(2) + '%</td>';
-    return '<td class="neu">0.00%</td>';
-}
-function render(rows) {
-    const tb = document.getElementById("tb");
-    tb.innerHTML = rows.map(r =>
-        '<tr><td>' + r.sym + '</td><td>₹' + r.ltp.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>' + fmtCell(r.m1) + fmtCell(r.d1) + '</tr>'
-    ).join('');
-}
-function sortBy(key, isNum) {
-    dir[key] = !dir[key];
-    const asc = dir[key];
-    document.querySelectorAll('.arr').forEach(e => e.textContent = '');
-    document.getElementById('a-' + key).textContent = asc ? '▲' : '▼';
-    const sorted = [...DATA].sort((a, b) => {
-        if (!isNum) return asc ? a.sym.localeCompare(b.sym) : b.sym.localeCompare(a.sym);
-        const va = (a[key] === null || a[key] === undefined) ? -999999 : a[key];
-        const vb = (b[key] === null || b[key] === undefined) ? -999999 : b[key];
-        return asc ? va - vb : vb - va;
-    });
-    render(sorted);
-}
-render(DATA);
-</script>
-</body>
-</html>
-"""
 
 @st.cache_data(ttl=45, show_spinner=False)
 def fetch_bulk_quotes(syms):
@@ -116,8 +55,67 @@ def fetch_bulk_quotes(syms):
             pass
     return quotes
 
+def fmt_cell(val):
+    if pd.isna(val):
+        return '<td class="tv-neu">—</td>'
+    if val > 0:
+        return f'<td class="tv-pos">+{val:.2f}%</td>'
+    if val < 0:
+        return f'<td class="tv-neg">{val:.2f}%</td>'
+    return '<td class="tv-neu">0.00%</td>'
+
 @st.fragment(run_every=60)
 def render_scanner():
     prev_px = st.session_state.setdefault("prev_px", {})
     now = datetime.now(ZoneInfo("Asia/Kolkata"))
     is_open = (now.weekday() < 5) and (555 <= now.hour * 60 + now.minute <= 930)
+    badge = '<span class="tv-live">● NSE LIVE</span>' if is_open else '<span class="tv-closed">● MARKET CLOSED</span>'
+
+    with st.spinner("Syncing market feed..."):
+        quotes = fetch_bulk_quotes(YF_SYMS)
+
+    st.markdown(f"""
+    <div class="tv-topbar">
+        <div class="tv-brand">
+            <div class="tv-logo">TV</div>
+            <div>
+                <div class="tv-title">NIFTY 500 SCREENER</div>
+                <div class="tv-sub">NSE Cash · {len(quotes)}/{len(YF_SYMS)} Stocks · {now.strftime("%H:%M:%S IST")}</div>
+            </div>
+        </div>
+        {badge}
+    </div>
+    """, unsafe_allow_html=True)
+
+    rows = []
+    for s, q in quotes.items():
+        ltp, prev = q["ltp"], q["prev"]
+        c1d = round((ltp - prev) / prev * 100, 2) if (prev and prev > 0 and ltp) else None
+        p1m = prev_px.get(s)
+        c1m = round((ltp - p1m) / p1m * 100, 2) if (p1m and p1m > 0 and ltp) else None
+        rows.append({"Symbol": s.replace(".NS", ""), "LTP": round(ltp, 2), "1m %": c1m, "1d %": c1d})
+
+    st.session_state["prev_px"] = {s: q["ltp"] for s, q in quotes.items()}
+    df = pd.DataFrame(rows)
+
+    c1, c2 = st.columns([1.4, 1.6])
+    with c1:
+        flt = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
+    with c2:
+        srt = st.radio("Sort", ["1d % ↓", "1d % ↑", "1m % ↓", "1m % ↑", "LTP ↓", "LTP ↑", "A-Z"], horizontal=True, label_visibility="collapsed")
+
+    if df.empty:
+        st.warning("No market data returned yet. Retrying on next cycle...")
+        return
+
+    if flt == "1m Gainers":
+        df = df[df["1m %"].notna() & (df["1m %"] > 0)]
+    elif flt == "1m Losers":
+        df = df[df["1m %"].notna() & (df["1m %"] < 0)]
+
+    if df.empty:
+        st.info("No stocks matched this 1-minute filter yet (market is closed or waiting for next 60s tick).")
+        return
+
+    sort_cfg = {
+        "1d % ↓": ("1d %", False),
