@@ -8,112 +8,25 @@ st.set_page_config(layout="wide", page_title="Nifty 500 — TradingView Screener
 
 st.markdown("""
 <style>
-/* Full TradingView Dark Canvas */
-html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
-    background-color: #131722 !important;
-    color: #D1D4DC !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif;
-}
-header[data-testid="stHeader"] {
-    background-color: rgba(19, 23, 34, 0.9) !important;
-}
-.block-container {
-    padding: 3.1rem 0.65rem 0.8rem 0.65rem !important;
-    max-width: 100% !important;
-}
-
-/* TradingView Top Bar */
-.tv-topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #1E222D;
-    border: 1px solid #2A2E39;
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-bottom: 10px;
-}
-.tv-brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.tv-logo {
-    background: #2962FF;
-    color: #FFFFFF;
-    font-weight: 800;
-    font-size: 0.85rem;
-    padding: 4px 7px;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
-}
-.tv-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #FFFFFF;
-    line-height: 1.1;
-}
-.tv-sub {
-    font-size: 0.72rem;
-    color: #787B86;
-    margin-top: 2px;
-}
-.tv-live {
-    background: rgba(8, 153, 129, 0.16);
-    color: #089981;
-    border: 1px solid rgba(8, 153, 129, 0.5);
-    padding: 4px 9px;
-    border-radius: 4px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-.tv-closed {
-    background: rgba(242, 54, 69, 0.16);
-    color: #F23645;
-    border: 1px solid rgba(242, 54, 69, 0.5);
-    padding: 4px 9px;
-    border-radius: 4px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-/* TradingView Segmented Filter Pills */
-div[role="radiogroup"] {
-    background: #1E222D;
-    border: 1px solid #2A2E39;
-    border-radius: 6px;
-    padding: 4px;
-    gap: 4px;
-    margin-bottom: 8px;
-    width: fit-content;
-}
-div[role="radiogroup"] label {
-    background: transparent !important;
-    border: none !important;
-    border-radius: 4px !important;
-    padding: 5px 14px !important;
-    margin: 0 !important;
-    color: #B2B5BE !important;
-    font-size: 0.82rem !important;
-    font-weight: 600 !important;
-}
-div[role="radiogroup"] label[data-checked="true"],
-div[role="radiogroup"] label:has(input:checked) {
-    background: #2962FF !important;
-    color: #FFFFFF !important;
-}
-div[role="radiogroup"] label > div:first-child {
-    display: none !important;
-}
-
-/* Dataframe Border & Container */
-[data-testid="stDataFrame"] {
-    border: 1px solid #2A2E39 !important;
-    border-radius: 6px !important;
-    overflow: hidden;
-}
+.stApp { background-color: #131722; color: #D1D4DC; }
+.block-container { padding: 3.1rem 0.65rem 1rem 0.65rem; max-width: 100%; }
+.tv-topbar { display: flex; justify-content: space-between; align-items: center; background: #1E222D; border: 1px solid #2A2E39; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; }
+.tv-brand { display: flex; align-items: center; gap: 8px; }
+.tv-logo { background: #2962FF; color: #FFFFFF; font-weight: 800; font-size: 0.85rem; padding: 4px 7px; border-radius: 4px; }
+.tv-title { font-size: 1.05rem; font-weight: 700; color: #FFFFFF; line-height: 1.1; }
+.tv-sub { font-size: 0.72rem; color: #787B86; margin-top: 2px; }
+.tv-live { background: rgba(8,153,129,0.16); color: #089981; border: 1px solid #089981; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+.tv-closed { background: rgba(242,54,69,0.16); color: #F23645; border: 1px solid #F23645; padding: 4px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+.tv-table-wrap { max-height: 74vh; overflow-y: auto; border: 1px solid #2A2E39; border-radius: 6px; background: #131722; }
+.tv-tbl { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.tv-tbl thead th { position: sticky; top: 0; background: #1E222D; color: #787B86; font-weight: 600; text-align: right; padding: 9px 10px; border-bottom: 1px solid #2A2E39; font-size: 0.76rem; text-transform: uppercase; }
+.tv-tbl thead th:first-child { text-align: left; }
+.tv-tbl tbody td { padding: 8px 10px; border-bottom: 1px solid #1E222D; text-align: right; color: #D1D4DC; }
+.tv-tbl tbody td:first-child { text-align: left; font-weight: 700; color: #FFFFFF; }
+.tv-tbl tbody tr:hover { background: #1E222D; }
+.tv-pos { color: #089981 !important; font-weight: 600; background: rgba(8,153,129,0.10); }
+.tv-neg { color: #F23645 !important; font-weight: 600; background: rgba(242,54,69,0.10); }
+.tv-neu { color: #787B86 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -141,20 +54,14 @@ def fetch_bulk_quotes(syms):
 if "prev_px" not in st.session_state:
     st.session_state.prev_px = {}
 
-def style_table(df):
-    def color_cell(v):
-        if pd.isna(v) or v == 0:
-            return "background-color: #131722; color: #787B86;"
-        if v > 0:
-            return "background-color: rgba(8, 153, 129, 0.12); color: #089981; font-weight: 600;"
-        return "background-color: rgba(242, 54, 69, 0.12); color: #F23645; font-weight: 600;"
-
-    return (
-        df.style
-        .set_properties(**{"background-color": "#131722", "color": "#D1D4DC", "border-color": "#2A2E39"})
-        .map(color_cell, subset=["1m %", "1d %"])
-        .format({"LTP": "₹{:.2f}", "1m %": "{:+.2f}%", "1d %": "{:+.2f}%"}, na_rep="—")
-    )
+def fmt_cell(val):
+    if pd.isna(val):
+        return '<td class="tv-neu">—</td>'
+    if val > 0:
+        return f'<td class="tv-pos">+{val:.2f}%</td>'
+    if val < 0:
+        return f'<td class="tv-neg">{val:.2f}%</td>'
+    return '<td class="tv-neu">0.00%</td>'
 
 @st.fragment(run_every=60)
 def render_scanner():
@@ -197,3 +104,31 @@ def render_scanner():
 
     if sort_by == "1m Gainers":
         df = df[df["1m %"].notna() & (df["1m %"] > 0)].sort_values("1m %", ascending=False)
+    elif sort_by == "1m Losers":
+        df = df[df["1m %"].notna() & (df["1m %"] < 0)].sort_values("1m %", ascending=True)
+    else:
+        df = df.sort_values("1d %", ascending=False, na_position="last")
+
+    if df.empty:
+        st.info("No stocks matched this 1-minute filter yet (market may be closed or waiting for next 60s tick).")
+        return
+
+    html_rows = []
+    for _, r in df.iterrows():
+        html_rows.append(
+            f"<tr><td>{r['Symbol']}</td><td>₹{r['LTP']:,.2f}</td>{fmt_cell(r['1m %'])}{fmt_cell(r['1d %'])}</tr>"
+        )
+
+    table_html = f"""
+    <div class="tv-table-wrap">
+        <table class="tv-tbl">
+            <thead>
+                <tr><th>Symbol</th><th>LTP</th><th>1m %</th><th>1d %</th></tr>
+            </thead>
+            <tbody>{"".join(html_rows)}</tbody>
+        </table>
+    </div>
+    """
+    st.markdown(table_html, unsafe_allow_html=True)
+
+render_scanner()
