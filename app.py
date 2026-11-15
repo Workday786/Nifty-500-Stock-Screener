@@ -90,4 +90,3 @@ def render_scanner():
     if df.empty:
         st.warning("Yahoo Finance returned 0 intraday candles right now. Retrying automatically...")
         return
-
