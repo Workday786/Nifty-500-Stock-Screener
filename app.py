@@ -35,42 +35,34 @@ NIFTY_500_RAW = """
 
 YF_SYMS = [s.strip() + ".NS" for s in NIFTY_500_RAW.replace("\n", "").split(",") if s.strip()]
 
+def parse_symbol(raw, sym, ist):
+    try:
+        c = raw[sym]["Close"].dropna()
+        if c.empty: return None
+        c_ist = c.tz_convert(ist) if c.index.tz is not None else c.tz_localize("UTC").tz_convert(ist)
+        last_dt = c_ist.index[-1]
+        ltp = float(c_ist.iloc[-1])
+        p1m = float(c_ist.iloc[-2]) if len(c_ist) >= 2 else None
+        prev_days = c_ist[c_ist.index.date < last_dt.date()]
+        p1d = float(prev_days.iloc[-1]) if not prev_days.empty else None
+        c1m = round((ltp - p1m) / p1m * 100, 2) if (p1m and p1m > 0 and ltp) else None
+        c1d = round((ltp - p1d) / p1d * 100, 2) if (p1d and p1d > 0 and ltp) else None
+        return (last_dt, {"Symbol": sym.replace(".NS", ""), "Last Close": round(ltp, 2), "Candle": last_dt.strftime("%I:%M %p"), "1m %": c1m, "1d %": c1d})
+    except Exception:
+        return None
+
 @st.cache_data(ttl=55, show_spinner=False)
 def fetch_candle_data(syms):
-    quotes = {}
-    latest_ts = None
     ist = ZoneInfo("Asia/Kolkata")
-
-    # Single unified download (2 batches of 250) -> extracts last 2 1m candles + prev day close
+    all_items = []
     for i in range(0, len(syms), 250):
         chunk = syms[i:i + 250]
-        try:
-            raw = yf.download(tickers=chunk, period="5d", interval="1m", group_by="ticker", threads=True, progress=False)
-            for s in chunk:
-                try:
-                    c = raw[s]["Close"].dropna()
-                    if c.empty: continue
-                    c_ist = c.tz_convert(ist) if c.index.tz is not None else c.tz_localize("UTC").tz_convert(ist)
-                    last_dt = c_ist.index[-1]
-                    if latest_ts is None or last_dt > latest_ts: latest_ts = last_dt
-
-                    last_close = float(c_ist.iloc[-1])
-                    prev_1m = float(c_ist.iloc[-2]) if len(c_ist) >= 2 else None
-
-                    prev_days = c_ist[c_ist.index.date < last_dt.date()]
-                    prev_day = float(prev_days.iloc[-1]) if not prev_days.empty else None
-
-                    quotes[s] = {
-                        "ltp": last_close,
-                        "prev_1m": prev_1m,
-                        "prev_day": prev_day,
-                        "candle_time": last_dt.strftime("%I:%M %p"),
-                    }
-                except Exception:
-                    pass
-        except Exception:
-            pass
-    return quotes, latest_ts
+        raw = yf.download(tickers=chunk, period="5d", interval="1m", group_by="ticker", threads=True, progress=False)
+        parsed = [parse_symbol(raw, s, ist) for s in chunk]
+        all_items.extend([p for p in parsed if p is not None])
+    latest_ts = max([x[0] for x in all_items], default=None)
+    rows = [x[1] for x in all_items]
+    return rows, latest_ts
 
 def color_pct(val):
     if pd.isna(val) or val == 0: return "color: #787B86;"
@@ -83,20 +75,19 @@ def render_scanner():
     is_open = (now_ist.weekday() < 5) and (555 <= now_ist.hour * 60 + now_ist.minute <= 930)
     badge = '<span class="tv-live">● NSE LIVE</span>' if is_open else '<span class="tv-closed">● MARKET CLOSED</span>'
 
-    # Render placeholder header immediately so screen is NEVER blank during fetch
     hdr_slot = st.empty()
     hdr_slot.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 · 1M CANDLE SCREENER</div><div class="tv-sub">Syncing last 1m candle from exchange...</div></div></div>{badge}</div>', unsafe_allow_html=True)
 
-    quotes, latest_ts = fetch_candle_data(YF_SYMS)
+    rows, latest_ts = fetch_candle_data(YF_SYMS)
+    candle_str = latest_ts.strftime("%d %b · %I:%M %p IST") if latest_ts is not None else "Unavailable"
+    next_bar = (latest_ts + pd.Timedelta(minutes=1)).strftime("%I:%M %p") if latest_ts is not None else "—"
 
-    if latest_ts is not None:
-        candle_str = latest_ts.strftime("%d %b · %I:%M %p IST")
-        next_bar = (latest_ts + pd.Timedelta(minutes=1)).strftime("%I:%M %p")
-    else:
-        candle_str = "Unavailable"
-        next_bar = "—"
+    hdr_slot.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 · 1M CANDLE SCREENER</div><div class="tv-sub">Stocks: {len(rows)}/{len(YF_SYMS)} · Last Candle: <span class="tv-cd">{candle_str}</span> · Next Bar: {next_bar}</div></div></div>{badge}</div>', unsafe_allow_html=True)
 
-    hdr_slot.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 · 1M CANDLE SCREENER</div><div class="tv-sub">Stocks: {len(quotes)}/{len(YF_SYMS)} · Last Candle: <span class="tv-cd">{candle_str}</span> · Next Bar: {next_bar}</div></div></div>{badge}</div>', unsafe_allow_html=True)
+    df = pd.DataFrame(rows)
+    flt = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
 
-    rows = []
-    for s, q in quotes.items():
+    if df.empty:
+        st.warning("Yahoo Finance returned 0 intraday candles right now. Retrying automatically...")
+        return
+
