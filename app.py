@@ -38,7 +38,8 @@ YF_SYMS = [s.strip() + ".NS" for s in NIFTY_500_RAW.replace("\n", "").split(",")
 def parse_symbol(raw, sym, ist):
     try:
         c = raw[sym]["Close"].dropna()
-        if c.empty: return None
+        if c.empty:
+            return None
         c_ist = c.tz_convert(ist) if c.index.tz is not None else c.tz_localize("UTC").tz_convert(ist)
         last_dt = c_ist.index[-1]
         ltp = float(c_ist.iloc[-1])
@@ -47,7 +48,16 @@ def parse_symbol(raw, sym, ist):
         p1d = float(prev_days.iloc[-1]) if not prev_days.empty else None
         c1m = round((ltp - p1m) / p1m * 100, 2) if (p1m and p1m > 0 and ltp) else None
         c1d = round((ltp - p1d) / p1d * 100, 2) if (p1d and p1d > 0 and ltp) else None
-        return (last_dt, {"Symbol": sym.replace(".NS", ""), "Last Close": round(ltp, 2), "Candle": last_dt.strftime("%I:%M %p"), "1m %": c1m, "1d %": c1d})
+        return (
+            last_dt,
+            {
+                "Symbol": sym.replace(".NS", ""),
+                "Last Close": round(ltp, 2),
+                "Candle": last_dt.strftime("%I:%M %p"),
+                "1m %": c1m,
+                "1d %": c1d,
+            },
+        )
     except Exception:
         return None
 
@@ -65,8 +75,10 @@ def fetch_candle_data(syms):
     return rows, latest_ts
 
 def color_pct(val):
-    if pd.isna(val) or val == 0: return "color: #787B86;"
-    if val > 0: return "color: #089981; font-weight: 700;"
+    if pd.isna(val) or val == 0:
+        return "color: #787B86;"
+    if val > 0:
+        return "color: #089981; font-weight: 700;"
     return "color: #F23645; font-weight: 700;"
 
 @st.fragment(run_every=60)
@@ -76,17 +88,20 @@ def render_scanner():
     badge = '<span class="tv-live">● NSE LIVE</span>' if is_open else '<span class="tv-closed">● MARKET CLOSED</span>'
 
     hdr_slot = st.empty()
-    hdr_slot.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 · 1M CANDLE SCREENER</div><div class="tv-sub">Syncing last 1m candle from exchange...</div></div></div>{badge}</div>', unsafe_allow_html=True)
+    hdr_slot.markdown(
+        f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 · 1M CANDLE SCREENER</div><div class="tv-sub">Syncing last 1m candle from exchange...</div></div></div>{badge}</div>',
+        unsafe_allow_html=True,
+    )
 
     rows, latest_ts = fetch_candle_data(YF_SYMS)
     candle_str = latest_ts.strftime("%d %b · %I:%M %p IST") if latest_ts is not None else "Unavailable"
     next_bar = (latest_ts + pd.Timedelta(minutes=1)).strftime("%I:%M %p") if latest_ts is not None else "—"
 
-    hdr_slot.markdown(f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 · 1M CANDLE SCREENER</div><div class="tv-sub">Stocks: {len(rows)}/{len(YF_SYMS)} · Last Candle: <span class="tv-cd">{candle_str}</span> · Next Bar: {next_bar}</div></div></div>{badge}</div>', unsafe_allow_html=True)
+    hdr_slot.markdown(
+        f'<div class="tv-topbar"><div class="tv-brand"><div class="tv-logo">TV</div><div><div class="tv-title">NIFTY 500 · 1M CANDLE SCREENER</div><div class="tv-sub">Stocks: {len(rows)}/{len(YF_SYMS)} · Last Candle: <span class="tv-cd">{candle_str}</span> · Next Bar: {next_bar}</div></div></div>{badge}</div>',
+        unsafe_allow_html=True,
+    )
 
     df = pd.DataFrame(rows)
     flt = st.radio("Filter", ["All", "1m Gainers", "1m Losers"], horizontal=True, label_visibility="collapsed")
 
-    if df.empty:
-        st.warning("Yahoo Finance returned 0 intraday candles right now. Retrying automatically...")
-        return
