@@ -78,8 +78,9 @@ def candle_row(symbol, minutes, now):
         prev = float(s.loc[previous])
         if prev > 0:
             change = (latest / prev - 1.0) * 100.0
+    # CHANGED: show only HH:MM (no date / no month), 24-hour India time.
     return {'symbol': symbol, 'close': latest,
-            'candle': candle_time.strftime('%d %b %I:%M %p'),
+            'candle': candle_time.strftime('%H:%M'),
             'candle_iso': candle_time.isoformat(), 'change': change}
 
 
@@ -171,20 +172,22 @@ def heading_html(next_refresh):
     return f'''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
     <style>body{{margin:0;background:#131722;color:#d1d4dc;font:15px system-ui,sans-serif}}
     h1{{color:{colour};font-size:clamp(23px,4vw,34px);line-height:1.15;margin:2px 0 10px;font-weight:800;letter-spacing:.015em}}
-    .time{{color:#e0e4eb;display:flex;flex-wrap:wrap;gap:8px 24px}}
-    strong{{color:#edf0f4;font-variant-numeric:tabular-nums}}</style></head><body>
+    .time{{color:#e0e4eb;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline}}
+    strong{{color:#edf0f4;font-variant-numeric:tabular-nums}}
+    #count{{color:{colour};font-size:22px;font-weight:800;min-width:2ch;display:inline-block}}</style></head><body>
     <h1>{name}</h1><div class="time"><span>Current time: <strong id="clock">--</strong> IST</span>
-    <span>Next refresh: <strong id="count">--</strong></span></div>
+    <span>Next refresh in <strong id="count">--</strong>s</span></div>
     <script>const target={target}; function tick() {{
       document.getElementById('clock').textContent = new Intl.DateTimeFormat('en-IN',{{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}}).format(new Date());
       const n=target===null ? null : Math.max(0, Math.ceil((target-Date.now())/1000));
-      document.getElementById('count').textContent = n===null || n===0 ? '—' : n+' sec';
+      document.getElementById('count').textContent = n===null ? '—' : n;
     }} tick();setInterval(tick,1000);</script></body></html>'''
 
 
 def table_html(rows, mode):
     """Simple HTML table: real bold, centered headers and clickable sorting.
     Sort choice is saved in the browser session when the table refreshes.
+    Column order: Symbol, Price, 1M %, Candle.
     """
     data = json.dumps(rows, ensure_ascii=True, allow_nan=False).replace('<', '\\u003c')
     mode_json = json.dumps(mode)
@@ -200,8 +203,8 @@ td{text-align:center;border-bottom:1px solid #2a2e39;padding:10px 5px;white-spac
 tr:hover td{background:#1e2530}.pos{color:#1fcaa5}.neg{color:#fb6974}.dim{color:#939aa7}
 .empty{text-align:center;padding:24px;color:#b5bac5}</style></head><body>
 <div class="wrap" id="wrap"><table><thead><tr>
-<th><button data-col="symbol">Symbol ⇅</button></th><th><button data-col="close">Last Close ⇅</button></th>
-<th><button data-col="candle_iso">Candle (IST) ⇅</button></th><th><button data-col="change">1m % ⇅</button></th>
+<th><button data-col="symbol">Symbol ⇅</button></th><th><button data-col="close">Price ⇅</button></th>
+<th><button data-col="change">1M % ⇅</button></th><th><button data-col="candle_iso">Candle ⇅</button></th>
 </tr></thead><tbody id="body"></tbody></table><div class="empty" id="empty" hidden>No matching rows.</div></div>
 <script>
 const rows=__DATA__, mode=__MODE__, key='nifty500-sort-v1';
@@ -213,8 +216,8 @@ function render(){
   let cmp=typeof x==='number'?x-y:String(x).localeCompare(String(y));return state.dir==='asc'?cmp:-cmp;});
  const body=document.getElementById('body');body.replaceChildren();
  for(const r of filtered){const tr=document.createElement('tr');
-  const vals=[r.symbol,'₹'+r.close.toFixed(2),r.candle,r.change===null?'—':(r.change>0?'+':'')+r.change.toFixed(2)+'%'];
-  vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===3)td.className=r.change===null||r.change===0?'dim':(r.change>0?'pos':'neg');tr.appendChild(td)});body.appendChild(tr)}
+  const vals=[r.symbol,'₹'+r.close.toFixed(2),r.change===null?'—':(r.change>0?'+':'')+r.change.toFixed(2)+'%',r.candle];
+  vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===2)td.className=r.change===null||r.change===0?'dim':(r.change>0?'pos':'neg');tr.appendChild(td)});body.appendChild(tr)}
  document.getElementById('empty').hidden=filtered.length>0;
  document.querySelectorAll('th button').forEach(b=>{const col=b.dataset.col;b.textContent=b.textContent.replace(/ [⇅↑↓]$/,'')+' '+(state.col===col?(state.dir==='asc'?'↑':'↓'):'⇅')});
 }
@@ -256,7 +259,7 @@ def main():
         elif len(rows) < len(SYMBOLS):
             st.caption(f'{len(rows)} of {len(SYMBOLS)} symbols returned usable candles; the rest are not shown.')
         components.html(table_html(rows, mode), height=640, scrolling=False)
-        st.caption('Research only: Yahoo candles can be missing or delayed. Check each candle date/time and verify prices with your broker. The refresh timer is not proof of live market data.')
+        st.caption('Research only: Yahoo candles can be missing or delayed. Check each candle time and verify prices with your broker. The refresh timer is not proof of live market data.')
 
     header_fragment()
     table_fragment()
