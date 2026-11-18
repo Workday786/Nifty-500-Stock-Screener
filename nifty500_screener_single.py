@@ -188,6 +188,7 @@ def table_html(rows, mode):
     """Simple HTML table: real bold, centered headers and clickable sorting.
     Sort choice is saved in the browser session when the table refreshes.
     Column order: Symbol, Price, 1M %, Candle.
+    Symbol is a link that opens the TradingView 1-minute chart in a new tab.
     """
     data = json.dumps(rows, ensure_ascii=True, allow_nan=False).replace('<', '\\u003c')
     mode_json = json.dumps(mode)
@@ -201,6 +202,8 @@ th button{all:unset;box-sizing:border-box;display:block;width:100%;padding:13px 
 th button:focus-visible{outline:2px solid #f3b65a;outline-offset:-3px}
 td{text-align:center;border-bottom:1px solid #2a2e39;padding:10px 5px;white-space:nowrap}
 tr:hover td{background:#1e2530}.pos{color:#1fcaa5}.neg{color:#fb6974}.dim{color:#939aa7}
+a.sym{color:#8ab4f8;text-decoration:none;font-weight:600}
+a.sym:hover{text-decoration:underline;color:#aecbfa}
 .empty{text-align:center;padding:24px;color:#b5bac5}</style></head><body>
 <div class="wrap" id="wrap"><table><thead><tr>
 <th><button data-col="symbol">Symbol ⇅</button></th><th><button data-col="close">Price ⇅</button></th>
@@ -216,8 +219,20 @@ function render(){
   let cmp=typeof x==='number'?x-y:String(x).localeCompare(String(y));return state.dir==='asc'?cmp:-cmp;});
  const body=document.getElementById('body');body.replaceChildren();
  for(const r of filtered){const tr=document.createElement('tr');
-  const vals=[r.symbol,'₹'+r.close.toFixed(2),r.change===null?'—':(r.change>0?'+':'')+r.change.toFixed(2)+'%',r.candle];
-  vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===2)td.className=r.change===null||r.change===0?'dim':(r.change>0?'pos':'neg');tr.appendChild(td)});body.appendChild(tr)}
+  // Symbol cell is a clickable TradingView link (1-minute chart, new tab).
+  const tdSym=document.createElement('td');
+  const a=document.createElement('a');
+  a.className='sym';
+  a.href='https://www.tradingview.com/chart/?symbol=NSE:'+encodeURIComponent(r.symbol)+'&interval=1';
+  a.target='_blank';
+  a.rel='noopener noreferrer';
+  a.textContent=r.symbol;
+  tdSym.appendChild(a);
+  tr.appendChild(tdSym);
+  // Price, 1M %, Candle remain plain text.
+  const vals=['₹'+r.close.toFixed(2), r.change===null?'—':(r.change>0?'+':'')+r.change.toFixed(2)+'%', r.candle];
+  vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===1)td.className=r.change===null||r.change===0?'dim':(r.change>0?'pos':'neg');tr.appendChild(td)});
+  body.appendChild(tr)}
  document.getElementById('empty').hidden=filtered.length>0;
  document.querySelectorAll('th button').forEach(b=>{const col=b.dataset.col;b.textContent=b.textContent.replace(/ [⇅↑↓]$/,'')+' '+(state.col===col?(state.dir==='asc'?'↑':'↓'):'⇅')});
 }
