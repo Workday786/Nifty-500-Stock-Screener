@@ -34,6 +34,62 @@ IST = ZoneInfo("Asia/Kolkata")
 # Excludes placeholder DUMMY* and REIT/RR series. EQ and BE series included.
 SYMBOLS = '''360ONE, AADHARHFC, AARTIIND, AAVAS, ABB, ABBOTINDIA, ABCAPITAL, ABDL, ABREL, ABSLAMC, ACC, ACE, ACMESOLAR, ACUTAAS, ADANIENSOL, ADANIENT, ADANIGREEN, ADANIPORTS, ADANIPOWER, AEGISLOG, AEGISVOPAK, AETHER, AFCONS, AFFLE, AIAENG, AIIL, AJANTPHARM, ALKEM, AMBER, AMBUJACEM, ANANDRATHI, ANANTRAJ, ANGELONE, ANTHEM, ANURAS, APARINDS, APLAPOLLO, APOLLOHOSP, APOLLOTYRE, APTUS, ARE&M, ASAHIINDIA, ASHOKLEY, ASIANPAINT, ASTERDM, ASTRAL, ATGL, ATHERENERG, ATUL, AUBANK, AUROPHARMA, AVANTIFEED, AWL, AXISBANK, AZAD, BAJAJ-AUTO, BAJAJFINSV, BAJAJHFL, BAJAJHLDNG, BAJFINANCE, BALKRISIND, BALRAMCHIN, BANDHANBNK, BANKBARODA, BANKINDIA, BATAINDIA, BBOX, BDL, BEL, BELRISE, BEML, BERGEPAINT, BHARATCOAL, BHARATFORG, BHARTIARTL, BHARTIHEXA, BHEL, BIOCON, BLS, BLUESTARCO, BOSCHLTD, BPCL, BRIGADE, BRITANNIA, BSE, BSOFT, CAMS, CANBK, CANFINHOME, CANHLIFE, CAPLIPOINT, CARBORUNIV, CARTRADE, CASTROLIND, CCL, CDSL, CEATLTD, CEMPRO, CENTRALBK, CESC, CGCL, CGPOWER, CHAMBLFERT, CHENNPETRO, CHOICEIN, CHOLAFIN, CHOLAHLDNG, CIEINDIA, CIPLA, CLEAN, CLEANMAX, CMPDI, COALINDIA, COCHINSHIP, COFORGE, COHANCE, COLPAL, CONCOR, CONCORDBIO, COROMANDEL, CPPLUS, CRAFTSMAN, CREDITACC, CRISIL, CROMPTON, CUB, CUMMINSIND, CUPID, CYIENT, DABUR, DALBHARAT, DATAPATTNS, DEEPAKFERT, DEEPAKNTR, DELHIVERY, DEVYANI, DIVISLAB, DIXON, DLF, DMART, DOMS, DRREDDY, ECLERX, EICHERMOT, EIDPARRY, EIHOTEL, ELECON, ELGIEQUIP, EMAMILTD, EMCURE, EMMVEE, ENDURANCE, ENGINERSIN, ENRIN, ESCORTS, ETERNAL, EXIDEIND, FACT, FEDERALBNK, FINCABLES, FIRSTCRY, FIVESTAR, FLUOROCHEM, FORCEMOT, FORTIS, FRACTAL, FSL, GABRIEL, GAIL, GALLANTT, GESHIP, GICRE, GILLETTE, GLAND, GLAXO, GLENMARK, GMDCLTD, GMRAIRPORT, GODFRYPHLP, GODREJCP, GODREJIND, GODREJPROP, GPIL, GRANULES, GRAPHITE, GRASIM, GRAVITA, GROWW, GRSE, GVT&D, HAL, HAVELLS, HBLENGINE, HCLTECH, HDBFS, HDFCAMC, HDFCBANK, HDFCLIFE, HEGAM, HEROMOTOCO, HEXT, HFCL, HINDALCO, HINDCOPPER, HINDPETRO, HINDUNILVR, HINDZINC, HOMEFIRST, HONASA, HONAUT, HSCL, HUDCO, HYUNDAI, ICICIAMC, ICICIBANK, ICICIGI, ICICILIFE, IDBI, IDEA, IDFCFIRSTB, IEX, IFCI, IGIL, IGL, IIFL, IKS, INDHOTEL, INDIACEM, INDIAMART, INDIANB, INDIGO, INDUSINDBK, INDUSTOWER, INFY, INOXINDIA, INOXWIND, INTELLECT, IOB, IOC, IPCALAB, IRB, IRCON, IRCTC, IREDA, IRFC, ITC, ITCHOTELS, ITI, J&KBANK, JAINREC, JBMA, JINDALSAW, JINDALSTEL, JIOFIN, JKCEMENT, JKTYRE, JMFINANCIL, JPPOWER, JSL, JSWCEMENT, JSWENERGY, JSWINFRA, JSWSTEEL, JUBLFOOD, JUBLINGREA, JWL, JYOTICNC, KAJARIACER, KALYANKJIL, KARURVYSYA, KAYNES, KEC, KEI, KFINTECH, KIMS, KIRLOSBROS, KIRLOSENG, KOTAKBANK, KPIL, KPITTECH, KPRMILL, KSB, LALPATHLAB, LAURUSLABS, LEMONTREE, LENSKART, LGEINDIA, LICHSGFIN, LICI, LINDEINDIA, LLOYDSME, LODHA, LT, LTF, LTFOODS, LTM, LTTS, LUPIN, M&M, M&MFIN, MAHABANK, MANAPPURAM, MANKIND, MARICO, MARUTI, MAXHEALTH, MAZDOCK, MCX, MEDANTA, MEESHO, MFSL, MGL, MINDACORP, MMTC, MOTHERSON, MOTILALOFS, MPHASIS, MRF, MRPL, MSUMI, MTARTECH, MUTHOOTFIN, NAM-INDIA, NATCOPHARM, NATIONALUM, NAUKRI, NAVA, NAVINFLUOR, NBCC, NCC, NESTLEIND, NETWEB, NEULANDLAB, NH, NHPC, NIACL, NLCINDIA, NMDC, NSLNISP, NTPC, NTPCGREEN, NUVAMA, NUVOCO, NYKAA, OBEROIRLTY, OFSS, OIL, OLAELEC, OLECTRA, ONESOURCE, ONGC, PAGEIND, PARADEEP, PATANJALI, PAYTM, PCBL, PERSISTENT, PETRONET, PFC, PFOCUS, PGEL, PHOENIXLTD, PIDILITIND, PIIND, PINELABS, PIRAMALFIN, PNB, PNBHOUSING, POLICYBZR, POLYCAB, POLYMED, POONAWALLA, POWERGRID, POWERINDIA, PPLPHARMA, PREMIERENE, PRESTIGE, PRIVISCL, PTCIL, PVRINOX, PWL, RADICO, RAILTEL, RAINBOW, RAMCOCEM, RBLBANK, RECLTD, REDINGTON, RELIANCE, RHIM, RITES, RKFORGE, RPOWER, RRKABEL, RUBICON, RVNL, SAGILITY, SAIL, SAILIFE, SAMMAANCAP, SANSERA, SARDAEN, SBICARD, SBILIFE, SBIN, SCHAEFFLER, SCHNEIDER, SCI, SHREECEM, SHRIPISTON, SHRIRAMFIN, SHYAMMETL, SIEMENS, SIGNATURE, SJVN, SOBHA, SOLARINDS, SONACOMS, SRF, STARHEALTH, STLTECH, SUMICHEM, SUNDARMFIN, SUNPHARMA, SUNTV, SUPREMEIND, SUZLON, SWANCORP, SWIGGY, SYNGENE, SYRMA, TARIL, TATACAP, TATACHEM, TATACOMM, TATACONSUM, TATAELXSI, TATAINVEST, TATAPOWER, TATASTEEL, TATATECH, TBOTEK, TCS, TDPOWERSYS, TECHM, TECHNOE, TEGA, TEJASNET, TENNIND, THANGAMAYL, THERMAX, TIINDIA, TIMKEN, TITAGARH, TITAN, TMCV, TMPV, TORNTPHARM, TORNTPOWER, TRENT, TRIDENT, TRITURBINE, TTML, TVSMOTOR, UBL, UCOBANK, ULTRACEMCO, UNIONBANK, UNITDSPR, UNOMINDA, UPL, URBANCO, USHAMART, UTIAMC, VAML, VBL, VEDL, VEDPOWER, VIJAYA, VISL, VMM, VOGL, VOLTAS, VTL, WAAREEENER, WELCORP, WELSPUNLIV, WHIRLPOOL, WIPRO, WOCKPHARMA, YESBANK, ZEEL, ZENSARTECH, ZENTEC, ZFCVINDIA, ZYDUSLIFE, ZYDUSWELL'''.split(', ')
 
+# ---- SECTOR MAPPING ----
+# Best-effort from NSE industry classifications. Unknown symbols show "—".
+# TO USE YOUR EXACT LIST: save a CSV at Data/nifty500_sectors.csv with columns
+# "symbol,sector" (or "Symbol,Industry") and it will override this dict on load.
+import os
+from pathlib import Path
+_SCRIPT_DIR = Path(__file__).resolve().parent
+
+_SECTOR_GROUPS = {
+    'Financial Services': ['360ONE','AADHARHFC','AAVAS','ABCAPITAL','ABSLAMC','AIIL','ANANDRATHI','ANGELONE','APTUS','AUBANK','AXISBANK','BAJAJFINSV','BAJAJHFL','BAJAJHLDNG','BAJFINANCE','BANDHANBNK','BANKBARODA','BANKINDIA','BSE','CAMS','CANBK','CANFINHOME','CANHLIFE','CDSL','CENTRALBK','CGCL','CHOICEIN','CHOLAFIN','CHOLAHLDNG','CREDITACC','CRISIL','CUB','FEDERALBNK','FIVESTAR','GICRE','GROWW','HDBFS','HDFCAMC','HDFCBANK','HDFCLIFE','HOMEFIRST','HUDCO','ICICIAMC','ICICIBANK','ICICIGI','ICICILIFE','IDBI','IDFCFIRSTB','IEX','IFCI','IIFL','INDIANB','INDUSINDBK','IOB','IREDA','IRFC','J&KBANK','JIOFIN','JMFINANCIL','KARURVYSYA','KFINTECH','KOTAKBANK','LICHSGFIN','LICI','LTF','M&MFIN','MAHABANK','MANAPPURAM','MCX','MFSL','MOTILALOFS','MUTHOOTFIN','NAM-INDIA','NIACL','NUVAMA','PAYTM','PFC','PINELABS','PIRAMALFIN','PNB','PNBHOUSING','POLICYBZR','POONAWALLA','PTCIL','RBLBANK','RECLTD','SAMMAANCAP','SBICARD','SBILIFE','SBIN','SHRIRAMFIN','STARHEALTH','SUNDARMFIN','TATACAP','TATAINVEST','UCOBANK','UNIONBANK','UTIAMC','YESBANK'],
+    'Information Technology': ['AFFLE','BBOX','BSOFT','COFORGE','CYIENT','DATAPATTNS','ECLERX','FRACTAL','HCLTECH','HEXT','INFY','INTELLECT','KAYNES','KPITTECH','LTM','LTTS','MPHASIS','NETWEB','OFSS','PERSISTENT','SAGILITY','TATAELXSI','TATATECH','TBOTEK','TCS','TECHM','WIPRO','ZENSARTECH'],
+    'Oil Gas & Consumable Fuels': ['ATGL','BPCL','CASTROLIND','CHENNPETRO','GAIL','HINDPETRO','IGL','IOC','MGL','MRPL','OIL','ONGC','PETRONET','RELIANCE'],
+    'Fast Moving Consumer Goods': ['ABDL','AVANTIFEED','AWL','BALRAMCHIN','BRITANNIA','CCL','COLPAL','DABUR','DOMS','EIDPARRY','EMAMILTD','GILLETTE','GODFRYPHLP','GODREJCP','HONASA','HINDUNILVR','ITC','LTFOODS','MARICO','NESTLEIND','PATANJALI','RADICO','TATACONSUM','UBL','UNITDSPR','VBL','ZYDUSWELL'],
+    'Automobile and Ancillaries': ['APOLLOTYRE','ARE&M','ASAHIINDIA','ASHOKLEY','ATHERENERG','BAJAJ-AUTO','BALKRISIND','BHARATFORG','BOSCHLTD','CEATLTD','CIEINDIA','EICHERMOT','ENDURANCE','ESCORTS','EXIDEIND','FORCEMOT','GABRIEL','HEROMOTOCO','HYUNDAI','JBMA','JKTYRE','M&M','MARUTI','MINDACORP','MOTHERSON','MRF','MSUMI','OLAELEC','OLECTRA','RKFORGE','SANSERA','SCHAEFFLER','SHRIPISTON','SONACOMS','TMPV','TMCV','TVSMOTOR','UNOMINDA','ZFCVINDIA'],
+    'Healthcare': ['ABBOTINDIA','ACUTAAS','AJANTPHARM','ALKEM','ANTHEM','APOLLOHOSP','ASTERDM','AUROPHARMA','BIOCON','CAPLIPOINT','CIPLA','COHANCE','CONCORDBIO','CUPID','DIVISLAB','DRREDDY','EMCURE','FORTIS','GLAND','GLAXO','GLENMARK','GRANULES','IPCALAB','KIMS','LALPATHLAB','LAURUSLABS','LUPIN','MANKIND','MAXHEALTH','MEDANTA','NATCOPHARM','NEULANDLAB','NH','ONESOURCE','POLYMED','PPLPHARMA','RAINBOW','RUBICON','SAILIFE','SUNPHARMA','SYNGENE','TORNTPHARM','VIJAYA','WOCKPHARMA','ZYDUSLIFE'],
+    'Consumer Durables': ['AMBER','ASIANPAINT','BATAINDIA','BERGEPAINT','BLUESTARCO','CPPLUS','CROMPTON','DIXON','HAVELLS','KAJARIACER','KALYANKJIL','LGEINDIA','THANGAMAYL','TITAN','VOLTAS','WHIRLPOOL'],
+    'Capital Goods': ['ABB','ACE','AIAENG','APARINDS','APLAPOLLO','AZAD','BDL','BEL','BELRISE','BEML','BHEL','CARBORUNIV','CGPOWER','COCHINSHIP','CRAFTSMAN','CUMMINSIND','ELECON','ELGIEQUIP','EMMVEE','ENRIN','FINCABLES','GRAPHITE','GRSE','GVT&D','HAL','HBLENGINE','HONAUT','INOXINDIA','INOXWIND','JINDALSAW','JWL','JYOTICNC','KEI','KIRLOSBROS','KIRLOSENG','KSB','MTARTECH','PGEL','POLYCAB','POWERINDIA','RHIM','RRKABEL','SCHNEIDER','SIEMENS','SUPREMEIND','SUZLON','SYRMA','TARIL','TDPOWERSYS','TEGA','THERMAX','TIMKEN','TITAGARH','TRITURBINE','USHAMART','WAAREEENER','ZENTEC'],
+    'Construction': ['AFCONS','ENGINERSIN','IRB','IRCON','KEC','KPIL','LT','NBCC','NCC','RITES','RVNL','TECHNOE'],
+    'Construction Materials': ['ACC','AMBUJACEM','CEMPRO','DALBHARAT','INDIACEM','JKCEMENT','JSWCEMENT','NUVOCO','RAMCOCEM','SHREECEM','ULTRACEMCO'],
+    'Chemicals': ['AARTIIND','AETHER','ANURAS','ATUL','CLEAN','CLEANMAX','DEEPAKFERT','DEEPAKNTR','FLUOROCHEM','HEGAM','HSCL','LINDEINDIA','NAVINFLUOR','PCBL','PIDILITIND','PIIND','PRIVISCL','SOLARINDS','SRF','SUMICHEM','TATACHEM','UPL'],
+    'Telecommunication': ['BHARTIARTL','BHARTIHEXA','HFCL','IDEA','INDUSTOWER','ITI','RAILTEL','STLTECH','TATACOMM','TEJASNET','TTML'],
+    'Power': ['ACMESOLAR','ADANIENSOL','ADANIGREEN','ADANIPOWER','CESC','IGIL','JPPOWER','JSWENERGY','NHPC','NLCINDIA','NTPC','NTPCGREEN','POWERGRID','PREMIERENE','RPOWER','SJVN','TATAPOWER','TORNTPOWER','VEDPOWER'],
+    'Metals & Mining': ['BHARATCOAL','CMPDI','COALINDIA','GALLANTT','GMDCLTD','GPIL','GRAVITA','HINDALCO','HINDCOPPER','HINDZINC','JAINREC','JINDALSTEL','JSL','JSWSTEEL','LLOYDSME','NATIONALUM','NAVA','NMDC','NSLNISP','SAIL','SARDAEN','SHYAMMETL','TATASTEEL','VAML','VEDL','VISL','WELCORP'],
+    'Consumer Services': ['CARTRADE','DEVYANI','DMART','EIHOTEL','ETERNAL','FIRSTCRY','INDHOTEL','INDIAMART','IRCTC','ITCHOTELS','JUBLFOOD','JUBLINGREA','LEMONTREE','LENSKART','MEESHO','NAUKRI','NYKAA','PWL','SWIGGY','TRENT','URBANCO'],
+    'Realty': ['ABREL','ANANTRAJ','BRIGADE','DLF','GODREJPROP','LODHA','OBEROIRLTY','PFOCUS','PHOENIXLTD','PRESTIGE','SIGNATURE','SOBHA'],
+    'Textiles': ['KPRMILL','PAGEIND','TRIDENT','VTL','WELSPUNLIV'],
+    'Media Entertainment & Publication': ['PVRINOX','SUNTV','ZEEL'],
+    'Diversified': ['3MINDIA','ADANIENT','GODREJIND','GRASIM'],
+    'Services': ['ADANIPORTS','AEGISLOG','BLS','CONCOR','DELHIVERY','FSL','GMRAIRPORT','INDIGO','JSWINFRA','MMTC','REDINGTON','SCI'],
+    'Fertilizers': ['CHAMBLFERT','COROMANDEL','FACT','PARADEEP'],
+}
+SECTORS = {sym: cat for cat, syms in _SECTOR_GROUPS.items() for sym in syms}
+
+
+def _load_sector_override():
+    """If the user supplies their own sector CSV, use it (wins over built-in dict)."""
+    candidates = [
+        _SCRIPT_DIR / 'Data' / 'nifty500_sectors.csv',
+        _SCRIPT_DIR / 'nifty500_sectors.csv',
+    ]
+    for path in candidates:
+        if not path.exists():
+            continue
+        try:
+            d = pd.read_csv(path)
+            sym_col = next(c for c in d.columns if c.strip().lower() == 'symbol')
+            sec_col = next(c for c in d.columns if c.strip().lower() in ('sector', 'industry'))
+            return dict(zip(d[sym_col].astype(str).str.strip(), d[sec_col].astype(str).str.strip()))
+        except Exception:
+            continue
+    return {}
+
+_OVERRIDE = _load_sector_override()
+if _OVERRIDE:
+    SECTORS.update(_OVERRIDE)
+
 
 def extract_ticker(raw, ticker):
     """Read either common yfinance column layout, or return None for a missing stock."""
@@ -78,8 +134,9 @@ def candle_row(symbol, minutes, now):
         prev = float(s.loc[previous])
         if prev > 0:
             change = (latest / prev - 1.0) * 100.0
-    # CHANGED: show only HH:MM (no date / no month), 24-hour India time.
+    # CHANGED: candle is HH:MM only. Sector is added from the mapping above.
     return {'symbol': symbol, 'close': latest,
+            'sector': SECTORS.get(symbol, '—'),
             'candle': candle_time.strftime('%H:%M'),
             'candle_iso': candle_time.isoformat(), 'change': change}
 
@@ -97,7 +154,6 @@ def fetch_snapshot():
         except Exception as exc:
             errors.append(f'Batch {start//BATCH_SIZE+1}: {type(exc).__name__}')
             continue
-        # Evaluate completion after network call. Do not include the still-forming bar.
         now = pd.Timestamp.now(tz=IST)
         for symbol, ticker in zip(batch, tickers):
             try:
@@ -110,17 +166,13 @@ def fetch_snapshot():
 
 
 class SharedScanner:
-    """A single background worker, shared across browser sessions in this process.
-
-    It keeps the last completed snapshot visible while fetching a replacement.
-    Streamlit is never called from this background thread.
-    """
+    """A single background worker, shared across browser sessions in this process."""
     def __init__(self):
         self.lock = Lock()
         self.rows = []
         self.errors = []
         self.completed_at = None
-        self.next_refresh = time.time()  # Initial download starts immediately.
+        self.next_refresh = time.time()
         self.failure = False
         self.last_seen = time.monotonic()
         Thread(target=self.loop, daemon=True, name='nifty-research-worker').start()
@@ -140,7 +192,7 @@ class SharedScanner:
                 due = self.next_refresh is not None and time.time() >= self.next_refresh
                 if active and due:
                     started_at = time.time()
-                    self.next_refresh = None  # In progress; don't invent a countdown.
+                    self.next_refresh = None
             if not (active and due):
                 time.sleep(1)
                 continue
@@ -152,7 +204,6 @@ class SharedScanner:
                 if rows:
                     self.rows = rows
                     self.completed_at = time.time()
-                # On total failure keep old table, clearly identify it as such.
                 self.failure = not bool(rows)
                 self.errors = errors
                 self.next_refresh = max(started_at + REFRESH_SECONDS, time.time() + 5)
@@ -164,8 +215,6 @@ def get_scanner():
 
 
 def heading_html(next_refresh):
-    # The countdown runs in the browser once per second. It is corrected from the
-    # actual worker schedule each time the header fragment refreshes.
     target = 'null' if next_refresh is None else str(int(next_refresh * 1000))
     name = html.escape(SCREENER_NAME)
     colour = html.escape(TITLE_COLOUR, quote=True)
@@ -185,10 +234,8 @@ def heading_html(next_refresh):
 
 
 def table_html(rows, mode):
-    """Simple HTML table: real bold, centered headers and clickable sorting.
-    Sort choice is saved in the browser session when the table refreshes.
-    Column order: Symbol, Price, 1M %, Candle.
-    Symbol is a link that opens the TradingView 1-minute chart in a new tab.
+    """Columns: Symbol (link to TradingView 1-min) | Price | 1M % | Sector | Candle.
+    All columns sortable. Sort choice and scroll position saved in browser session.
     """
     data = json.dumps(rows, ensure_ascii=True, allow_nan=False).replace('<', '\\u003c')
     mode_json = json.dumps(mode)
@@ -196,7 +243,7 @@ def table_html(rows, mode):
 <style>
 *{box-sizing:border-box}body{margin:0;background:#131722;color:#d1d4dc;font:14px system-ui,sans-serif}
 .wrap{overflow:auto;max-height:620px;border:1px solid #2a2e39;border-radius:7px}
-table{border-collapse:collapse;width:100%;min-width:500px;font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;min-width:600px;font-variant-numeric:tabular-nums}
 th{position:sticky;top:0;background:#242938;color:#f3f4f5;font-size:14px;font-weight:800;text-align:center;z-index:2;border-bottom:1px solid #38404d;padding:0}
 th button{all:unset;box-sizing:border-box;display:block;width:100%;padding:13px 6px;cursor:pointer;text-align:center}
 th button:focus-visible{outline:2px solid #f3b65a;outline-offset:-3px}
@@ -206,8 +253,11 @@ a.sym{color:#8ab4f8;text-decoration:none;font-weight:600}
 a.sym:hover{text-decoration:underline;color:#aecbfa}
 .empty{text-align:center;padding:24px;color:#b5bac5}</style></head><body>
 <div class="wrap" id="wrap"><table><thead><tr>
-<th><button data-col="symbol">Symbol ⇅</button></th><th><button data-col="close">Price ⇅</button></th>
-<th><button data-col="change">1M % ⇅</button></th><th><button data-col="candle_iso">Candle ⇅</button></th>
+<th><button data-col="symbol">Symbol ⇅</button></th>
+<th><button data-col="close">Price ⇅</button></th>
+<th><button data-col="change">1M % ⇅</button></th>
+<th><button data-col="sector">Sector ⇅</button></th>
+<th><button data-col="candle_iso">Candle ⇅</button></th>
 </tr></thead><tbody id="body"></tbody></table><div class="empty" id="empty" hidden>No matching rows.</div></div>
 <script>
 const rows=__DATA__, mode=__MODE__, key='nifty500-sort-v1';
@@ -219,7 +269,7 @@ function render(){
   let cmp=typeof x==='number'?x-y:String(x).localeCompare(String(y));return state.dir==='asc'?cmp:-cmp;});
  const body=document.getElementById('body');body.replaceChildren();
  for(const r of filtered){const tr=document.createElement('tr');
-  // Symbol cell is a clickable TradingView link (1-minute chart, new tab).
+  // Symbol -> clickable TradingView 1-min chart link.
   const tdSym=document.createElement('td');
   const a=document.createElement('a');
   a.className='sym';
@@ -229,9 +279,14 @@ function render(){
   a.textContent=r.symbol;
   tdSym.appendChild(a);
   tr.appendChild(tdSym);
-  // Price, 1M %, Candle remain plain text.
-  const vals=['₹'+r.close.toFixed(2), r.change===null?'—':(r.change>0?'+':'')+r.change.toFixed(2)+'%', r.candle];
-  vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===1)td.className=r.change===null||r.change===0?'dim':(r.change>0?'pos':'neg');tr.appendChild(td)});
+  // Price | 1M % | Sector | Candle (plain text). Change is at index 1.
+  const vals=['₹'+r.close.toFixed(2),
+              r.change===null?'—':(r.change>0?'+':'')+r.change.toFixed(2)+'%',
+              r.sector||'—',
+              r.candle];
+  vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;
+    if(i===1)td.className=r.change===null||r.change===0?'dim':(r.change>0?'pos':'neg');
+    tr.appendChild(td)});
   body.appendChild(tr)}
  document.getElementById('empty').hidden=filtered.length>0;
  document.querySelectorAll('th button').forEach(b=>{const col=b.dataset.col;b.textContent=b.textContent.replace(/ [⇅↑↓]$/,'')+' '+(state.col===col?(state.dir==='asc'?'↑':'↓'):'⇅')});
