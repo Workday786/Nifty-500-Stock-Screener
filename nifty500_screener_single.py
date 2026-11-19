@@ -15,7 +15,9 @@ from threading import Thread, Lock
 import html
 import json
 import math
+import os
 import time
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -38,8 +40,6 @@ SYMBOLS = '''360ONE, AADHARHFC, AARTIIND, AAVAS, ABB, ABBOTINDIA, ABCAPITAL, ABD
 # Best-effort from NSE industry classifications. Unknown symbols show "—".
 # TO USE YOUR EXACT LIST: save a CSV at Data/nifty500_sectors.csv with columns
 # "symbol,sector" (or "Symbol,Industry") and it will override this dict on load.
-import os
-from pathlib import Path
 _SCRIPT_DIR = Path(__file__).resolve().parent
 
 _SECTOR_GROUPS = {
@@ -107,7 +107,14 @@ def extract_ticker(raw, ticker):
 
 
 def candle_row(symbol, minutes, now):
-    """Use only finished bars and immediately adjacent minutes in the same session."""
+    """Use only finished bars and immediately adjacent minutes in the same session.
+
+    Returns % changes for the last three rolling 1-minute windows:
+      1M % = change between T-1 and T   (the just-completed minute)
+      2M % = change between T-2 and T-1 (the previous minute)
+      3M % = change between T-3 and T-2 (the minute before that)
+    Any window with a missing bar on either side returns None ("—").
+    """
     if minutes is None or minutes.empty or 'Close' not in minutes:
         return None
     s = pd.to_numeric(minutes['Close'], errors='coerce').dropna()
@@ -128,17 +135,32 @@ def candle_row(symbol, minutes, now):
         return None
     candle_time = s.index[-1]
     latest = float(s.iloc[-1])
-    previous = candle_time - pd.Timedelta(minutes=1)
-    change = None
-    if previous in s.index and previous.date() == candle_time.date():
-        prev = float(s.loc[previous])
-        if prev > 0:
-            change = (latest / prev - 1.0) * 100.0
-    # CHANGED: candle is HH:MM only. Sector is added from the mapping above.
+
+    def window_change(offset):
+        """offset=1 -> T-1..T ; offset=2 -> T-2..T-1 ; offset=3 -> T-3..T-2."""
+        newer = candle_time - pd.Timedelta(minutes=offset - 1)
+        older = candle_time - pd.Timedelta(minutes=offset)
+        if newer not in s.index or older not in s.index:
+            return None
+        if newer.date() != candle_time.date() or older.date() != candle_time.date():
+            return None
+        p_new = float(s.loc[newer])
+        p_old = float(s.loc[older])
+        if p_old <= 0:
+            return None
+        return (p_new / p_old - 1.0) * 100.0
+
+    change_1m = window_change(1)
+    change_2m = window_change(2)
+    change_3m = window_change(3)
+
     return {'symbol': symbol, 'close': latest,
             'sector': SECTORS.get(symbol, '—'),
             'candle': candle_time.strftime('%H:%M'),
-            'candle_iso': candle_time.isoformat(), 'change': change}
+            'candle_iso': candle_time.isoformat(),
+            'change': change_1m,
+            'change_2m': change_2m,
+            'change_3m': change_3m}
 
 
 def fetch_snapshot():
@@ -234,8 +256,9 @@ def heading_html(next_refresh):
 
 
 def table_html(rows, mode):
-    """Columns: Symbol (link to TradingView 1-min) | Price | 1M % | Sector | Candle.
-    All columns sortable. Sort choice and scroll position saved in browser session.
+    """Columns: Symbol (link) | Price | 1M % | 2M % | 3M % | Sector | Candle.
+    All columns sortable. 1M% / 2M% / 3M% colour-coded green/red.
+    Default sort: 1M % descending. Filter (Gainers/Losers) uses 1M % only.
     """
     data = json.dumps(rows, ensure_ascii=True, allow_nan=False).replace('<', '\\u003c')
     mode_json = json.dumps(mode)
@@ -243,7 +266,7 @@ def table_html(rows, mode):
 <style>
 *{box-sizing:border-box}body{margin:0;background:#131722;color:#d1d4dc;font:14px system-ui,sans-serif}
 .wrap{overflow:auto;max-height:620px;border:1px solid #2a2e39;border-radius:7px}
-table{border-collapse:collapse;width:100%;min-width:600px;font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;min-width:760px;font-variant-numeric:tabular-nums}
 th{position:sticky;top:0;background:#242938;color:#f3f4f5;font-size:14px;font-weight:800;text-align:center;z-index:2;border-bottom:1px solid #38404d;padding:0}
 th button{all:unset;box-sizing:border-box;display:block;width:100%;padding:13px 6px;cursor:pointer;text-align:center}
 th button:focus-visible{outline:2px solid #f3b65a;outline-offset:-3px}
@@ -256,17 +279,24 @@ a.sym:hover{text-decoration:underline;color:#aecbfa}
 <th><button data-col="symbol">Symbol ⇅</button></th>
 <th><button data-col="close">Price ⇅</button></th>
 <th><button data-col="change">1M % ⇅</button></th>
+<th><button data-col="change_2m">2M % ⇅</button></th>
+<th><button data-col="change_3m">3M % ⇅</button></th>
 <th><button data-col="sector">Sector ⇅</button></th>
 <th><button data-col="candle_iso">Candle ⇅</button></th>
 </tr></thead><tbody id="body"></tbody></table><div class="empty" id="empty" hidden>No matching rows.</div></div>
 <script>
 const rows=__DATA__, mode=__MODE__, key='nifty500-sort-v1';
-let state={col:'change',dir:mode==='1m Losers'?'asc':'desc',mode:mode};
+let state={col:'change',dir:'desc',mode:mode};
 try{const old=JSON.parse(sessionStorage.getItem(key));if(old&&old.mode===mode)state=old;}catch(e){}
+function fmtPct(v){ if(v==null) return '—'; return (v>0?'+':'')+v.toFixed(2)+'%'; }
+function cls(v){ if(v==null||v===0) return 'dim'; return v>0?'pos':'neg'; }
 function render(){
- const filtered=rows.filter(r=>mode==='All'||(r.change!==null&&(mode==='1m Gainers'?r.change>0:r.change<0)));
- filtered.sort((a,b)=>{let x=a[state.col],y=b[state.col];if(x===null)return y===null?0:1;if(y===null)return -1;
-  let cmp=typeof x==='number'?x-y:String(x).localeCompare(String(y));return state.dir==='asc'?cmp:-cmp;});
+ const filtered=rows.filter(r=>mode==='All'||(r.change!=null&&(mode==='1m Gainers'?r.change>0:r.change<0)));
+ filtered.sort((a,b)=>{let x=a[state.col],y=b[state.col];
+   if(x==null)return y==null?0:1;
+   if(y==null)return -1;
+   let cmp=typeof x==='number'?x-y:String(x).localeCompare(String(y));
+   return state.dir==='asc'?cmp:-cmp;});
  const body=document.getElementById('body');body.replaceChildren();
  for(const r of filtered){const tr=document.createElement('tr');
   // Symbol -> clickable TradingView 1-min chart link.
@@ -279,17 +309,19 @@ function render(){
   a.textContent=r.symbol;
   tdSym.appendChild(a);
   tr.appendChild(tdSym);
-  // Price | 1M % | Sector | Candle (plain text). Change is at index 1.
-  const vals=['₹'+r.close.toFixed(2),
-              r.change===null?'—':(r.change>0?'+':'')+r.change.toFixed(2)+'%',
-              r.sector||'—',
-              r.candle];
-  vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;
-    if(i===1)td.className=r.change===null||r.change===0?'dim':(r.change>0?'pos':'neg');
-    tr.appendChild(td)});
+  // Price
+  let td=document.createElement('td'); td.textContent='₹'+r.close.toFixed(2); tr.appendChild(td);
+  // 1M % / 2M % / 3M %  (coloured green/red, dash if missing)
+  [r.change, r.change_2m, r.change_3m].forEach(v=>{
+    const td=document.createElement('td'); td.textContent=fmtPct(v); td.className=cls(v); tr.appendChild(td);
+  });
+  // Sector | Candle
+  td=document.createElement('td'); td.textContent=r.sector||'—'; tr.appendChild(td);
+  td=document.createElement('td'); td.textContent=r.candle; tr.appendChild(td);
   body.appendChild(tr)}
  document.getElementById('empty').hidden=filtered.length>0;
- document.querySelectorAll('th button').forEach(b=>{const col=b.dataset.col;b.textContent=b.textContent.replace(/ [⇅↑↓]$/,'')+' '+(state.col===col?(state.dir==='asc'?'↑':'↓'):'⇅')});
+ document.querySelectorAll('th button').forEach(b=>{const col=b.dataset.col;
+   b.textContent=b.textContent.replace(/ [⇅↑↓]$/,'')+' '+(state.col===col?(state.dir==='asc'?'↑':'↓'):'⇅')});
 }
 const wrap=document.getElementById('wrap');
 try{wrap.scrollTop=Number(sessionStorage.getItem('nifty500-scroll-v1')||0)}catch(e){}
